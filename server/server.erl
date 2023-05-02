@@ -7,7 +7,12 @@
     logout/1,
     online/0 ]).
 
-%start(Port) -> spawn(fun() -> server(Port) end).
+%start(Port) -> register(?MODULE, spawn(fun() -> server(Port) end)).
+%Precisamos ler de um arquivo e guardar numa estrutura quando for iniciado , por isso
+%Adicionar mais um input a o inicializador do servidor que aceita uma string q é o nome de um arquivo
+%Precisamos adicionar mensagens q o servidor recebe do cliente com a localização para sabermos se "matou" o inimigo, se ganhou 
+%Algum bonus , etc ..
+%Criar , remover , fazer login está parcialmente feito
 start()->
     register(?MODULE,spawn(fun()->loop(#{}) end)).
 
