@@ -1,22 +1,23 @@
 -module(login_manager).
--export([start/0,
-    loop/1,
+-export([start/2,
+    server/1,
     create_account/2,
     close_account/ 2,
     login/2,
     logout/1,
     online/0 ]).
 
-%start(Port) -> register(?MODULE, spawn(fun() -> server(Port) end)).
+%start(Port) -> register(?MODULE, spawn(fun() -> server(Port,Port) end)).
 %Precisamos ler de um arquivo e guardar numa estrutura quando for iniciado , por isso
 %Adicionar mais um input a o inicializador do servidor que aceita uma string q é o nome de um arquivo
 %Precisamos adicionar mensagens q o servidor recebe do cliente com a localização para sabermos se "matou" o inimigo, se ganhou 
 %Algum bonus , etc ..
 %Criar , remover , fazer login está parcialmente feito
-start()->
-    register(?MODULE,spawn(fun()->loop(#{}) end)).
+start(Port,file)->
+    {ok,Map} = lerArquivo(file),
+    register(?MODULE,spawn(fun()->server(Port,Map) end)).
 
-
+stop(Server) -> Server ! stop.
 
 invoke (Request) ->
     ?MODULE ! {Request,self()},
@@ -35,12 +36,12 @@ logout (User) -> invoke({logout,User}).
 
 online()-> invoke ({logout}).
 
-
-loop(Map)->
+server(Port,Map)->
+    {ok, LSock} = gen_tcp:listen(Port, [binary, {packet, line}, {reuseaddr, true}])
     receive {Request, From}->
         {Res,NextState} = handle (Request,Map),
         From !{Res,?MODULE},
-        loop(NextState)
+        server(Port,NextState)
     end .
 
 handle({create_account,User,Pass},Map)->
@@ -54,18 +55,18 @@ handle({create_account,User,Pass},Map)->
 handle({close_account,User,Pass},Map)->
     case maps:find(User,Map) of
         {ok,{Pass,_}}->
-            {ok,loop(map:remove(user,Map))};
+            {ok,server(Port,map:remove(user,Map))};
         _ ->                
-            {invalid,loop(Map)}
+            {invalid,server(Port,Map)}
             
     end;
 
 handle({login,User,Pass},Map)->
     case maps:find(User,Map) of
         {ok,{Pass,_}}->
-            {ok,loop(map:update(user,{Pass,true},Map))};
+            {ok,server(Port,map:update(user,{Pass,true},Map))};
         _ ->                
-            {invalid,loop(Map)}
+            {invalid,server(Port,Map)}
             
     end;
 
@@ -73,9 +74,9 @@ handle({login,User,Pass},Map)->
 handle({logout,User},Map)->
     case maps:find(User,Map) of
         {ok,{Pass,_}}->
-            {ok,loop(map:update(user,{Pass,false},Map))};
+            {ok,server(Port,map:update(user,{Pass,false},Map))};
         _ ->                
-            {invalid,loop(Map)}
+            {invalid,server(Port,Map)}
             
     end;
 
