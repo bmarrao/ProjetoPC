@@ -1,7 +1,7 @@
 -module(server).
 -export([escreverArquivo/2,
     lerArquivo/1,
-    loop/1,
+    loop/3,
     create_account/2,
     close_account/ 2,
     login/2,
@@ -13,7 +13,6 @@
 %Adicionar mais um input a o inicializador do servidor que aceita uma string q é o nome de um arquivo
 %Precisamos adicionar mensagens q o servidor recebe do cliente com a localização para sabermos se "matou" o inimigo, se ganhou 
 %Algum bonus , etc ..
-%Criar , remover , fazer login está parcialmente feito
 
 lerArquivo(String)->
     {ok, S} = file:read_file(String),
@@ -34,68 +33,64 @@ escreverArquivo(Map,File)->
 	end, ok, Map).
     
 
+start(Port,File) -> spawn(fun() -> server(Port,File) end).
+stop(Server) -> ?MODULE ! stop.
 
-%start(Port,file)->
- %   {ok,Map} = lerArquivo(file),
-  %  register(?MODULE,spawn(fun()->loop(Port,Map) end)).
 
-stop(loop) -> loop ! stop.
-
-invoke (Request) ->
-    ?MODULE ! {Request,self()},
-    receive {Res,?MODULE} -> Res end .
-    
-    
-    
+server(Port,File) -> 
+    {ok, LSock} = gen_tcp:listen(Port, [binary, {packet, line}]),
+    Map = lerArquivo(file),
+    register(?MODULE, spawn(fun() -> loop(LSock,Map,File) end )).
 rpc(Request) -> 
     ?MODULE ! {Request,self()},
     receive {Res,?MODULE} -> Res end.
 
-create_account(Usr,Pass) -> rpc({create_account,Usr,Pass}).
-close_account(Usr,Pass) -> rpc({close_account,Usr,Pass}).
-login(Usr,Pass) -> rpc({login,Usr,Pass}).
-logout(Usr) -> rpc({logout,Usr}).
+create_account(User,Pass) -> rpc({create_account,User,Pass}).
+close_account(User,Pass) -> rpc({close_account,User,Pass}).
+login(User,Pass) -> rpc({login,User,Pass}).
+logout(User) -> rpc({logout,User}).
 online() -> rpc({online}).
 
 handle({create_account,User,Pass},Map) ->
     case maps:find(User,Map) of
         error ->
-            {ok,Map#{User=> {Pass,false}}};
+            {ok,Map#{User=> {Pass,0,0,false}}};
         _ ->
             {user_exists,Map}
    
     end;
 handle({close_account,User,Pass},Map) ->
     case maps:find(User,Map) of
-        {ok,{Pass,_}} ->
+        {ok,{Pass,_,_,_}} ->
             {ok,maps:remove(Map,User)};     
          _ -> 
             {invalid,Map}
     end;
 handle({login,User,Pass},Map) ->
     case maps:find(User,Map) of
-        {ok,{Pass,false}} -> 
+        {ok,{Pass,Nivel,Vitorias,false}} -> 
             
-            {ok,maps:update(User, {Pass,true}, Map)};
+            {ok,maps:update(User, {Pass,Nivel,Vitorias,true}, Map)};
         _ ->
             
             {invalid,Map}
     end;
 handle({logout,User},Map) ->
     case maps:find(User,Map) of
-        {ok,{P,true}} ->
-            {ok,maps:update(User,{P,false},Map)};
+        {ok,{Pass,Nivel,Vitorias,true}} ->
+            {ok,maps:update(User,{Pass,Nivel,Vitorias,false},Map)};
         _ ->
             {ok,Map}
     end;
 handle({online},Map) ->
-    Res = [User ||{User,{_,true}} <- maps:to_list(Map)],
+    Res = [User ||{User,{_,_,_true}} <- maps:to_list(Map)],
     {Res,Map}.
 
-
-loop(Map) ->
-    receive {Req, From} ->
-        {Resp,NextMap} = handle(Req,Map),
-        From ! {Resp,?MODULE},
-        loop(NextMap)
-    end.
+loop(Lsock, Map,File) ->
+    receive 
+        {Req, From} ->
+            {Resp,NextMap} = handle(Req,Map),
+            From ! {Resp,?MODULE},
+            loop(Lsock ,NextMap,File);
+        stop-> 
+            escreverArquivo(Map,File) end.
