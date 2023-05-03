@@ -1,5 +1,6 @@
--module(login_manager).
--export([start/2,
+-module(server).
+-export([escreverArquivo/2,
+    lerArquivo/1,
     loop/1,
     create_account/2,
     close_account/ 2,
@@ -13,9 +14,30 @@
 %Precisamos adicionar mensagens q o servidor recebe do cliente com a localização para sabermos se "matou" o inimigo, se ganhou 
 %Algum bonus , etc ..
 %Criar , remover , fazer login está parcialmente feito
-start(Port,file)->
-    {ok,Map} = lerArquivo(file),
-    register(?MODULE,spawn(fun()->loop(Port,Map) end)).
+
+lerArquivo(String)->
+    {ok, S} = file:read_file(String),
+    Usuarios = string:tokens(binary_to_list(S), "\n"),
+    lerArquivo(Usuarios,#{}).
+
+lerArquivo([],Map)-> Map;
+
+lerArquivo([H|T],Map)->
+    [User,Pass,Nivel,Vitorias]= string:tokens(H,";"),
+    lerArquivo(T,Map#{User=> {Pass,Nivel,Vitorias,false}}).
+
+escreverArquivo(Map,File)->
+    {ok, S} = file:open(File, [write]),
+    maps:fold(
+	fun(User, {Pass,Nivel,Vitorias,Status}, ok) ->
+		io:format(S, "~s~n", [User++";"++Pass++";"++Nivel ++ ";"++Vitorias])
+	end, ok, Map).
+    
+
+
+%start(Port,file)->
+ %   {ok,Map} = lerArquivo(file),
+  %  register(?MODULE,spawn(fun()->loop(Port,Map) end)).
 
 stop(loop) -> loop ! stop.
 
