@@ -1,10 +1,14 @@
 -module(server).
 -export([escreverArquivo/2,
+    acharOnline/2,
     lerArquivo/1,
     loop/3,
     create_account/2,
     close_account/ 2,
     login/2,
+    start/2,
+    server/2,
+    stop/0,
     logout/1,
     online/0 ]).
 
@@ -13,6 +17,7 @@
 %Adicionar mais um input a o inicializador do servidor que aceita uma string q é o nome de um arquivo
 %Precisamos adicionar mensagens q o servidor recebe do cliente com a localização para sabermos se "matou" o inimigo, se ganhou 
 %Algum bonus , etc ..
+acharOnline(Map,Nivel)-> [User ||{User,{_,Nivel,_,true,false}} <- maps:to_list(Map)].
 
 lerArquivo(String)->
     {ok, S} = file:read_file(String),
@@ -34,7 +39,7 @@ escreverArquivo(Map,File)->
     
 
 start(Port,File) -> spawn(fun() -> server(Port,File) end).
-stop(Server) -> ?MODULE ! stop.
+stop() -> ?MODULE ! stop.
 
 
 server(Port,File) -> 
