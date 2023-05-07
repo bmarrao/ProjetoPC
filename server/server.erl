@@ -5,7 +5,13 @@
 %Algum bonus , etc ..
 acharOnline(Map,Nivel)-> [User ||{User,{_,Nivel,_,true,false}} <- maps:to_list(Map)].
 
-    
+findGame(Map, User,Nivel,RM)->
+    Lista = acharOnline(Map,Nivel),
+    if
+        length(Lista) != 1 ->
+            
+
+
 
 lerArquivo(String)->
     {ok, S} = file:read_file(String),
@@ -114,7 +120,12 @@ usersManager(Users,String)->
             {_, NewUsers} = close_account(User,Pass,Users);
         "login "  ++ Rest ->
             [User,Pass] = string:tokens(Rest," "),
-            {_, NewUsers} = login (User,Pass,Users);
+            case login of
+                {_, NewUsers,Nivel} ->
+                    findGame(Users,User,Nivel);
+                {_,NewUsers} ->
+                    ok
+            end;
         "logout " ++ User ->
             {_, NewUsers} = logout (User,Users)
     end,
@@ -146,7 +157,7 @@ login(User,Pass,Map) ->
     case maps:find(User,Map) of
         {ok,{Pass,Nivel,Vitorias,false}} -> 
             
-            {ok,maps:update(User, {Pass,Nivel,Vitorias,true}, Map)};
+            {ok,maps:update(User, {Pass,Nivel,Vitorias,true}, Map),Nivel};
         _ ->
             
             {invalid,Map}
