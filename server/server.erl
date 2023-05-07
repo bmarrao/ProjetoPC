@@ -7,8 +7,20 @@ acharOnline(Map,Nivel)-> [User ||{User,{_,Nivel,_,true,false}} <- maps:to_list(M
 
 findGame(Map, User,Nivel,RM)->
     Lista = acharOnline(Map,Nivel),
+    Tamanho = length(Lista),
     if
-        length(Lista) != 1 ->
+        (Tamanho == 1) ->
+            {false};
+        true ->
+            [H | T] = Lista ,
+            if H == User ->
+                RM ! {newMatch ,lists:nth(1, T),User};
+            true ->
+                RM ! {newMatch ,H,User}
+            end
+    end.
+            
+
             
 
 
@@ -94,12 +106,19 @@ rm(Rooms,Users) ->
         {mensagem,Data}->
              case Data of
                 "users:" ++ Rest ->
-                    NewUsers = usersManager(Users,Rest),
+                    NewUsers = usersManager(Users,Rest,self()),
                     NewRooms = Rooms ;
                 _ ->
                     NewUsers = Users,
                     NewRooms = Rooms        
             end   ; 
+        {newMatch,User1,User2}->
+            {Pass1,Nivel1,Vitorias1,false} = maps:get(User1,Users),
+            Aux = maps:update(User1,{Pass1,Nivel1,Vitorias1,true},Users),
+            {Pass,Nivel,Vitorias,false} = maps:get(User2,Users),
+            NewUsers = maps:update(User2,{Pass,Nivel,Vitorias,true},Aux),
+            NewRooms = Rooms ;
+
         stop ->
             NewUsers = Users,
             NewRooms = Rooms ,
@@ -107,7 +126,7 @@ rm(Rooms,Users) ->
     end,
     rm(NewRooms,NewUsers).
 
-usersManager(Users,String)->
+usersManager(Users,String,RM)->
     io:format("Entrei no usersManager"),
 
     case String of 
@@ -122,7 +141,7 @@ usersManager(Users,String)->
             [User,Pass] = string:tokens(Rest," "),
             case login of
                 {_, NewUsers,Nivel} ->
-                    findGame(Users,User,Nivel);
+                    findGame(Users,User,Nivel,RM);
                 {_,NewUsers} ->
                     ok
             end;
