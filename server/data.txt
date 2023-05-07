@@ -1,5 +1,0 @@
-nome;senha;nivel;vitorias
-abraco;senha;nivel;vitorias
-alo;senha;nivel;vitorias
-meu;senha;nivel;vitorias
-breno;senha;nivel;vitorias

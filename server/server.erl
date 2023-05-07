@@ -1,4 +1,5 @@
 -module(server).
+-export([start/2, stop/0,lerArquivo/1,escreverArquivo/2]).
 
 %Precisamos adicionar mensagens q o servidor recebe do cliente com a localização para sabermos se "matou" o inimigo, se ganhou 
 %Algum bonus , etc ..
@@ -21,7 +22,7 @@ escreverArquivo(Map,File)->
     {ok, S} = file:open(File, [write]),
     maps:fold(
 	fun(User, {Pass,Nivel,Vitorias,Status}, ok) ->
-		io:format(S, "~s~n", [User++";"++Pass++";"++Nivel ++ ";"++Vitorias])
+		io:format(S, "~s~n", (User++";"++Pass++";"++integer_to_list(Nivel)++";"++integer_to_list(Vitorias)))
 	end, ok, Map).
 
 start(Port,File) -> 
@@ -32,14 +33,28 @@ stop() -> ?MODULE ! stop.
 
 
 server(Port,File) ->
+
     {ok, LSock} = gen_tcp:listen(Port, [{packet, line}, {reuseaddr, true}]),
-    Map = lerArquivo(file),
+
+    Map = lerArquivo(File),
+
     RM = spawn(fun() -> rm(#{},Map) end),
     spawn(fun() -> acceptor(LSock, RM) end),
-    receive stop -> escreverArquivo(Map,File) end. 
+    receive 
+        stop ->  
+            RM ! stop ,
+            receive
+                {data,NewMap} ->
+                    io:format("~p~n", [NewMap]),
+                    escreverArquivo(NewMap,File) 
+            end
+    end.
+
 
 
 acceptor(LSock, RM) ->
+    io:format("Acceptor"),
+
     {ok, Sock} = gen_tcp:accept(LSock),
     spawn(fun() -> acceptor(LSock,RM) end),
     user(Sock, RM).
@@ -49,17 +64,26 @@ user(Sock ,RM) ->
     receive
         {line, Data} ->
             gen_tcp:send(Sock, Data),
+            io:format("Recebi algo "),
             user(Sock, RM);
         {tcp, _, Data} ->
             RM ! {mensagem, Data},
-            user(Sock,RM)
+            user(Sock,RM);
+        _ ->
+            io:format("User saiu\n")
+
         %{tcp_closed, _} ->
-         %   Room ! {leave, self()};
+         %    % Colocar pra ir offline
+          %  io:format("User saiu\n");
         %{tcp_error, _, _} ->
-         %   Room ! {leave, self()}
+            %Colocar pra ir offline
+         %   io:format("User saiu\n")
+
 end.
 
 rm(Rooms,Users) ->
+    io:format("Entrei no rm"),
+
     receive
         {mensagem,Data}->
              case Data of
@@ -68,25 +92,35 @@ rm(Rooms,Users) ->
                     NewRooms = Rooms ;
                 _ ->
                     NewUsers = Users,
-                    NewRooms = Rooms,
-                    rm(Rooms,Users)
-            end    
+                    NewRooms = Rooms        
+            end   ; 
+        stop ->
+            NewUsers = Users,
+            NewRooms = Rooms ,
+            ?MODULE ! {data ,Users}
     end,
     rm(NewRooms,NewUsers).
 
-usersManager(Users,Rest)->
-    case Rest of 
-        "create_account " ++ User ++ " " ++ Pass ->
-            {_, NewUsers} -> create_account(User,Pass,Map);
-        "close_account " ++ User ++ " " ++ Pass ->
-            {_, NewUsers} -> close_account(User,Pass,Map);
-        "login " ++ User ++ " " ++ Pass ->
-            {_, NewUsers} -> login (User,Pass,Map);
+usersManager(Users,String)->
+    io:format("Entrei no usersManager"),
+
+    case String of 
+        "create_account " ++ Rest ->
+            io:format("Create ACcount"),
+            [User,Pass] = string:tokens(Rest," "),
+            {_, NewUsers} = create_account(User,Pass,Users);
+        "close_account " ++ Rest ->
+            [User,Pass] = string:tokens(Rest," "),
+            {_, NewUsers} = close_account(User,Pass,Users);
+        "login "  ++ Rest ->
+            [User,Pass] = string:tokens(Rest," "),
+            {_, NewUsers} = login (User,Pass,Users);
         "logout " ++ User ->
-            {_, NewUsers} -> logout (User,Pass,Map)
+            {_, NewUsers} = logout (User,Users)
     end,
     NewUsers.
 
+ 
 
 
 
