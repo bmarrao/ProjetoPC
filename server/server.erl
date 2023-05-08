@@ -75,18 +75,22 @@ acceptor(LSock, RM) ->
 
     {ok, Sock} = gen_tcp:accept(LSock),
     spawn(fun() -> acceptor(LSock,RM) end),
-    user(Sock, RM).
+    user(Sock, RM,RM).
 
 
-user(Sock ,RM) ->
+user(Sock ,RM,Room) ->
     receive
         {line, Data} ->
             gen_tcp:send(Sock, Data),
             io:format("Recebi algo "),
-            user(Sock, RM);
+            Room = spawn(fun()-> room([]) end),
+            user(Sock, RM,Room);
         {tcp, _, Data} ->
             RM ! {mensagem, Data},
-            user(Sock,RM);
+            user(Sock,RM,Room);
+        {entrarJogo,Game} ->
+            Game ! {entrei,self()},
+            user(Sock,RM,Game);
         _ ->
             io:format("User saiu\n")
 
@@ -117,7 +121,10 @@ rm(Rooms,Users) ->
             Aux = maps:update(User1,{Pass1,Nivel1,Vitorias1,true},Users),
             {Pass,Nivel,Vitorias,false} = maps:get(User2,Users),
             NewUsers = maps:update(User2,{Pass,Nivel,Vitorias,true},Aux),
-            NewRooms = Rooms ;
+            NewRooms = Rooms ,
+            Room = spawn(fun()-> room([]) end),
+            
+
 
         stop ->
             NewUsers = Users,
@@ -151,7 +158,19 @@ usersManager(Users,String,RM)->
     NewUsers.
 
  
-
+room(Pids) ->
+    receive
+    {enter, Pid} ->
+        io:format("user entered ~n", []),
+        room([Pid | Pids]);
+    {line, Data} = Msg ->
+        io:format("received ~p ~n", [Data]),
+        [Pid ! Msg || Pid <- Pids],
+        room(Pids);
+    {leave, Pid} ->
+        io:format("user left ~n", []),
+        room(Pids -- [Pid])
+end.
 
 
 
