@@ -40,7 +40,7 @@ escreverArquivo(Map,File)->
     {ok, S} = file:open(File, [write]),
     maps:fold(
 	fun(User, {Pass,Nivel,Vitorias,Status}, ok) ->
-		io:format(S, "~s~n", (User++";"++Pass++";"++integer_to_list(Nivel)++";"++integer_to_list(Vitorias)))
+		io:format(S, "~s~n", [(User++";"++Pass++";"++integer_to_list(Nivel)++";"++integer_to_list(Vitorias))])
 	end, ok, Map).
 
 start(Port,File) -> 
@@ -89,8 +89,7 @@ user(Sock ,RM,Room) ->
             RM ! {mensagem, Data},
             user(Sock,RM,Room);
         {entrarJogo,Game} ->
-            Game ! {entrei,self()},
-            user(Sock,RM,Game);
+            Game ! {entrei,self()};
         _ ->
             io:format("User saiu\n")
 
@@ -102,6 +101,8 @@ user(Sock ,RM,Room) ->
          %   io:format("User saiu\n")
 
 end.
+
+
 
 rm(Rooms,Users) ->
     io:format("Entrei no rm"),
@@ -122,10 +123,8 @@ rm(Rooms,Users) ->
             {Pass,Nivel,Vitorias,false} = maps:get(User2,Users),
             NewUsers = maps:update(User2,{Pass,Nivel,Vitorias,true},Aux),
             NewRooms = Rooms ,
-            Room = spawn(fun()-> room([]) end),
-            
-
-
+            Room = spawn(fun()-> room([]) end);
+        
         stop ->
             NewUsers = Users,
             NewRooms = Rooms ,
@@ -140,7 +139,8 @@ usersManager(Users,String,RM)->
         "create_account " ++ Rest ->
             io:format("Create ACcount"),
             [User,Pass] = string:tokens(Rest," "),
-            {_, NewUsers} = create_account(User,Pass,Users);
+            NewPass = re:replace(Pass, "\n" , "", [global, {return, list}]),
+            {_, NewUsers} = create_account(User,NewPass,Users);
         "close_account " ++ Rest ->
             [User,Pass] = string:tokens(Rest," "),
             {_, NewUsers} = close_account(User,Pass,Users);
