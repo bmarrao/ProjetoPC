@@ -1,15 +1,17 @@
 -module(server).
--export([start/2, stop/0,lerArquivo/1,escreverArquivo/2]).
+-export([start/2, stop/0,lerArquivo/1,escreverArquivo/2,acharOnline/2]).
 
 %Precisamos adicionar mensagens q o servidor recebe do cliente com a localização para sabermos se "matou" o inimigo, se ganhou 
 %Algum bonus , etc ..
-acharOnline(Map,Nivel)-> [User ||{User,{_,Nivel,_,true,false}} <- maps:to_list(Map)].
+acharOnline(Map,Nivel)-> [User ||{User,{_,Nivel,_,true,_}} <- maps:to_list(Map)].
 
 findGame(Map, User,Nivel,RM)->
+    io:format("Achar jogo\n"),
     Lista = acharOnline(Map,Nivel),
+    io:format("~s~nTesteOla",[Lista]),
     Tamanho = length(Lista),
     if
-        (Tamanho == 1) ->
+        (Tamanho < 1) ->
             {false};
         true ->
             [H | T] = Lista ,
@@ -72,7 +74,6 @@ server(Port,File) ->
 
 acceptor(LSock, RM) ->
     io:format("Acceptor"),
-
     {ok, Sock} = gen_tcp:accept(LSock),
     spawn(fun() -> acceptor(LSock,RM) end),
     user(Sock, RM,RM).
@@ -89,10 +90,11 @@ user(Sock ,RM,Room) ->
                     io:format("Recebi algo\n"),
                     RM ! {mensagem, Rest,self()};
                 _ ->
-                    Room ! {mensagem,Data}
+                    Room ! {line,Data}
                 end, 
             user(Sock,RM,Room);
-        {entrarJogo,Game} ->
+        {newGame,Game} ->
+            Game ! {enter,self()},
             user(Sock,RM,Game);
         _ ->
             io:format("User saiu\n")
@@ -110,26 +112,31 @@ end.
  
 gameRoom(User1,User2) ->
     receive
-    {line, Data} = Msg ->
-        io:format("received ~p ~n", [Data]),
-        gameRoom(User1,User2);
-    {gameOver, Pid} ->
-        io:format("user left ~n", []),
-        gameRoom(User1,User2)
+        {line, Data} ->
+            io:format("received ~p ~n", [Data]),
+            gameRoom(User1,User2);
+        {enter, Pid} ->
+            io:format("user entered ~n", []),
+            gameRoom(User1,User2);
+        {gameOver, Pid} ->
+            io:format("user left ~n", []),
+            gameRoom(User1,User2)
+        
 end.
 
 rm(Rooms,Users) ->
-    io:format("Entrei no rm"),
+    io:format("Entrei no rm\n"),
 
     receive
         {mensagem,Data,From}->
             NewUsers = usersManager(Users,Data,self(),From),
             NewRooms = Rooms ;
         {newMatch,User1,User2}->
-            {Pass1,Nivel1,Vitorias1,false,From1} = maps:get(User1,Users),
-            Aux = maps:update(User1,{Pass1,Nivel1,Vitorias1,true},Users),
-            {Pass,Nivel,Vitorias,false,From} = maps:get(User2,Users),
-            NewUsers = maps:update(User2,{Pass,Nivel,Vitorias,true},Aux),
+            io:format("Encontrei Partida\n"),
+            {Pass1,Nivel1,Vitorias1,true,From1} = maps:get(User1,Users),
+            Aux = maps:update(User1,{Pass1,Nivel1,Vitorias1,false,From1},Users),
+            {Pass,Nivel,Vitorias,true,From} = maps:get(User2,Users),
+            NewUsers = maps:update(User2,{Pass,Nivel,Vitorias,false,From},Aux),
             NewRooms = Rooms ,
             Room = spawn(fun()-> gameRoom([User1,Pass1,Nivel1,Vitorias1,From1],[User2,Pass,Nivel,Vitorias,From]) end),
             From1 ! {newGame, Room},
@@ -143,23 +150,27 @@ rm(Rooms,Users) ->
     rm(NewRooms,NewUsers).
 
 usersManager(Users,String,RM,From)->
-    io:format("Entrei no usersManager"),
+    io:format("Entrei no usersManager\n"),
 
     case String of 
         "create_account " ++ Rest ->
-            io:format("Create ACcount"),
+            io:format("Create ACcount\n"),
             [User,Pass] = string:tokens(Rest," "),
             NewPass = re:replace(Pass, "\n" , "", [global, {return, list}]),
             {_, NewUsers} = create_account(User,NewPass,Users,From);
         "close_account " ++ Rest ->
+            io:format("Close Account\n"),
             [User,Pass] = string:tokens(Rest," "),
             {_, NewUsers} = close_account(User,Pass,Users);
         "login "  ++ Rest ->
+            io:format("Login\n"),
             [User,Pass] = string:tokens(Rest," "),
             case login(User,Pass,Users,From) of
                 {_, NewUsers,Nivel} ->
+                    io:format("OIIIIIIIII\n"),
                     findGame(Users,User,Nivel,RM);
                 {_,NewUsers} ->
+                    io:format("Algo de errado\n"),
                     ok
             end;
         "logout " ++ User ->
@@ -189,22 +200,21 @@ close_account(User,Pass,Map) ->
     end.
 
 login(User,Pass,Map,From) -> 
+    [NewPass] = string:tokens(Pass, "\n"),
     case maps:find(User,Map) of
-        {ok,{Pass,Nivel,Vitorias,false,_}} -> 
-            
-            {ok,maps:update(User, {Pass,Nivel,Vitorias,true,From}, Map),Nivel};
-        _ ->
-            
-            {invalid,Map}
+        {ok,{NewPass,Nivel,Vitorias,false,_}} -> 
+            {ok,maps:update(User, {NewPass,Nivel,Vitorias,true,From}, Map),Nivel}
+        %_ ->binary_to_list(S)
+         %   {invalid,Map}
     end.
 
 
 logout(User,Map) -> 
     case maps:find(User,Map) of
         {ok,{Pass,Nivel,Vitorias,true,From}} ->
-            {ok,maps:update(User,{Pass,Nivel,Vitorias,false,From},Map)};
-        _ ->
-            {ok,Map}
+            {ok,maps:update(User,{Pass,Nivel,Vitorias,false,From},Map)}
+        %_ ->
+        %    {ok,Map}
     end.
 
 
