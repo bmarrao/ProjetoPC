@@ -1,1 +1,3 @@
-Brenin;marrao;0;0
+Brenin;Marrão;0;0
+Tales;Rovaris;0;0
+Tiago;Rodrigues;0;0

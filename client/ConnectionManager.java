@@ -44,7 +44,7 @@ public class ConnectionManager
         {
             res = in.readLine();
             String[] arr = res.split(":");
-            while (arr[0] != res) {
+            while (arr[0] != type) {
                 res = in.readLine();
             }
         }
@@ -57,7 +57,6 @@ public class ConnectionManager
     public void close() throws IOException
     {
         this.s.close();
-
     }
 }
 

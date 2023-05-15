@@ -34,7 +34,7 @@ lerArquivo([],Map)-> Map;
 
 lerArquivo([H|T],Map)->
     [User,Pass,Nivel,Vitorias]= string:tokens(H,";"),
-    lerArquivo(T,Map#{User=> {Pass,Nivel,Vitorias,false}}).
+    lerArquivo(T,Map#{User=> {Pass,list_to_integer(Nivel),list_to_integer(Vitorias),false}}).
 
 escreverArquivo(Map,File)->
     {ok, S} = file:open(File, [write]),
