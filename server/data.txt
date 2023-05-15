@@ -1,3 +1,4 @@
 Brenin;Marrão;0;0
+Brennin;1234;0;0
 Tales;Rovaris;0;0
 Tiago;Rodrigues;0;0
