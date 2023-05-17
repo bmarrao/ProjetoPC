@@ -112,18 +112,27 @@ end.
 
  
 gameRoom(User1,User2) ->
+    %se o jogo acabar antes do horario Matar o Tref     erlang:cancel(TRef),
+
     receive
-        {line, Data} ->
-            io:format("received ~p ~n", [Data]),
-            gameRoom(User1,User2);
-        {enter, Pid} ->
-            io:format("user entered ~n", []),
-            gameRoom(User1,User2);
-        {gameOver, Pid} ->
-            io:format("user left ~n", []),
-            gameRoom(User1,User2)
+        {start,Tref}->
+            gameRoom(User1,User2,Tref)
+    
         
 end.
+
+gameRoom(User1,User2,Tref) ->
+     receive
+        {line, Data} ->
+            io:format("received ~p ~n", [Data]),
+            gameRoom(User1,User2,Tref);
+        {enter, _} ->
+            io:format("user entered ~n", []),
+            gameRoom(User1,User2,Tref);
+        gameOver ->
+            io:format("Acabou o jogo ~n", []),
+            gameRoom(User1,User2,Tref)
+    end.
 
 rm(Rooms,Users) ->
     io:format("Entrei no rm\n"),
@@ -140,6 +149,8 @@ rm(Rooms,Users) ->
             NewUsers = maps:update(User2,{Pass,Nivel,Vitorias,false,From},Aux),
             NewRooms = Rooms ,
             Room = spawn(fun()-> gameRoom([User1,Pass1,Nivel1,Vitorias1,From1],[User2,Pass,Nivel,Vitorias,From]) end),
+            Tref = timer:send_after(120000 ,Room,gameOver),
+            Room ! {start,Tref},
             From1 ! {newGame, Room},
             From ! {newGame, Room};
             %Talvez encontre erro no futuro de ter q atualizar o status pra true quando acabar a partida
@@ -162,7 +173,7 @@ usersManager(Users,String,RM,From)->
         "close_account " ++ Rest ->
             io:format("Close Account\n"),
             [User,Pass] = string:tokens(Rest," "),
-            {_, NewUsers} = close_account(User,Pass,Users);
+            {_, NewUsers} = close_account(User,Pass,Users,From);
         "login "  ++ Rest ->
             io:format("Login\n"),
             [User,Pass] = string:tokens(Rest," "),
@@ -175,7 +186,7 @@ usersManager(Users,String,RM,From)->
                     ok
             end;
         "logout " ++ User ->
-            {_, NewUsers} = logout (User,Users)
+            {_, NewUsers} = logout (User,Users,From)
     end,
     NewUsers.
 
@@ -195,38 +206,38 @@ create_account(User,Pass,Map,From) ->
    
     end.
 
-close_account(User,Pass,Map) ->
+close_account(User,Pass,Map,From) ->
     case maps:find(User,Map) of
         {ok,{Pass,_,_,_,From}} ->
-            {ok,maps:remove(Map,User)},
-            From ! {line,"Users:sucessful"}; 
+            From ! {line,"Users:sucessful\n"},
+            {ok,maps:remove(Map,User)};
          _ -> 
+            From ! {line, "Users:unsucessful\n"},
             {invalid,Map}
     end.
 
 login(User,Pass,Map,From) -> 
     [NewPass] = string:tokens(Pass, "\n"),
+    io:format("~s~n\n",[User ++ NewPass]),
     case maps:find(User,Map) of
         {ok,{NewPass,Nivel,Vitorias,false,_}} -> 
-            {ok,maps:update(User, {NewPass,Nivel,Vitorias,true,From}, Map),Nivel},
-            From ! {line,"Users:sucessful"};
+            From ! {line,"Users:sucessful\n"},
+            {ok,maps:update(User, {NewPass,Nivel,Vitorias,true,From}, Map),Nivel};       
         _ ->
-            From ! {line,"Users:unsucessful"}
+            From ! {line,"Users:unsucessful\n"},
+            {ok,Map}
 
     end.
 
 
-logout(User,Map) -> 
+logout(User,Map,From) -> 
     case maps:find(User,Map) of
         {ok,{Pass,Nivel,Vitorias,true,From}} ->
-            {ok,maps:update(User,{Pass,Nivel,Vitorias,false,From},Map)},
-            From ! {line,"Users:sucessful"}
-        %_ ->
-        %    {ok,Map}
+            From ! {line,"Users:sucessful\n"},
+            {ok,maps:update(User,{Pass,Nivel,Vitorias,false,From},Map)};
+        _ ->
+            From ! {line,"Users:uncessful\n"},
+            {ok,Map}
     end.
 
-
-%handle({online},Map) ->
- %   Res = [User ||{User,{_,_,_true}} <- maps:to_list(Map)],
-%    {Res,Map}.
 
