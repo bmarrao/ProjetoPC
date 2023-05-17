@@ -1,5 +1,5 @@
 float posx = 450;
-float posy = 450;
+loat posy = 450;
 float ang = 0;
 float vel = 0;
 boolean keys1;

@@ -4,6 +4,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.io.*;
 import java.net.*;
+
 public class ConnectionManager
 {
     Socket s;
@@ -42,15 +43,23 @@ public class ConnectionManager
         String res = "";
         try
         {
+            
             res = in.readLine();
+            
             String[] arr = res.split(":");
-            while (arr[0] != type) {
-                res = in.readLine();
-            }
+            
+            while(!type.equals(arr[0])) 
+            {
+                
+                res = in.readLine();            
+                arr = res.split(":");
+            }   
         }
         catch(Exception e) {
 
         }
+        
+
         return res ;
     }
 
@@ -59,4 +68,6 @@ public class ConnectionManager
         this.s.close();
     }
 }
+
+
 

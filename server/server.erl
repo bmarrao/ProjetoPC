@@ -82,6 +82,7 @@ acceptor(LSock, RM) ->
 user(Sock ,RM,Room) ->
     receive
         {line, Data} ->
+            io:format("Dou print \n"),
             gen_tcp:send(Sock, Data),
             user(Sock, RM,Room);
         {tcp, _, Data} ->
@@ -185,16 +186,20 @@ usersManager(Users,String,RM,From)->
 create_account(User,Pass,Map,From) ->
      case maps:find(User,Map) of
         error ->
+            %io:format("Dou print account \n"),
+            From ! {line,"Users:sucessful\n"},    
             {ok,Map#{User=> {Pass,0,0,false,From}}};
         _ ->
+            From ! {line,"Users:unsucessful\n"},    
             {user_exists,Map}
    
     end.
 
 close_account(User,Pass,Map) ->
     case maps:find(User,Map) of
-        {ok,{Pass,_,_,_,_}} ->
-            {ok,maps:remove(Map,User)};     
+        {ok,{Pass,_,_,_,From}} ->
+            {ok,maps:remove(Map,User)},
+            From ! {line,"Users:sucessful"}; 
          _ -> 
             {invalid,Map}
     end.
@@ -203,16 +208,19 @@ login(User,Pass,Map,From) ->
     [NewPass] = string:tokens(Pass, "\n"),
     case maps:find(User,Map) of
         {ok,{NewPass,Nivel,Vitorias,false,_}} -> 
-            {ok,maps:update(User, {NewPass,Nivel,Vitorias,true,From}, Map),Nivel}
-        %_ ->binary_to_list(S)
-         %   {invalid,Map}
+            {ok,maps:update(User, {NewPass,Nivel,Vitorias,true,From}, Map),Nivel},
+            From ! {line,"Users:sucessful"};
+        _ ->
+            From ! {line,"Users:unsucessful"}
+
     end.
 
 
 logout(User,Map) -> 
     case maps:find(User,Map) of
         {ok,{Pass,Nivel,Vitorias,true,From}} ->
-            {ok,maps:update(User,{Pass,Nivel,Vitorias,false,From},Map)}
+            {ok,maps:update(User,{Pass,Nivel,Vitorias,false,From},Map)},
+            From ! {line,"Users:sucessful"}
         %_ ->
         %    {ok,Map}
     end.
