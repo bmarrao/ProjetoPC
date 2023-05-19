@@ -1,5 +1,5 @@
 -module(server).
--export([start/2, stop/0,lerArquivo/1,escreverArquivo/2,acharOnline/2]).
+-export([start/2, stop/0,lerArquivo/1,escreverArquivo/2,acharOnline/2,listagemVitorias/1]).
 
 %Precisamos adicionar mensagens q o servidor recebe do cliente com a localização para sabermos se "matou" o inimigo, se ganhou 
 %Algum bonus , etc ..
@@ -109,11 +109,10 @@ user(Sock ,RM,Room) ->
 
 end.
 
-
+generateObject()->
+    {rand:uniform(3),rand:unifrom(),rand:uniform()}.
  
-gameRoom(User1,User2) ->
-    %se o jogo acabar antes do horario Matar o Tref     erlang:cancel(TRef),
-
+gameRoom(User1,User2,RM) ->
     receive
         {start,Tref}->
             gameRoom(User1,User2,Tref)
@@ -121,17 +120,32 @@ gameRoom(User1,User2) ->
         
 end.
 
-gameRoom(User1,User2,Tref) ->
+gameRoom(User1,User2,Tref,RM) ->
+    Object =generateObject(),
+    timer:send_after(10000  ,self(),newObject),
+    User1 ! {objeto,Object},
+    User1 ! {objeto,Object},
+
      receive
         {line, Data} ->
             io:format("received ~p ~n", [Data]),
-            gameRoom(User1,User2,Tref);
+            gameRoom(User1,User2,Tref,RM);
         {enter, _} ->
             io:format("user entered ~n", []),
-            gameRoom(User1,User2,Tref);
+            gameRoom(User1,User2,Tref,RM);
+        {playerOut,Ganhou,Perdeu}->
+            RM ! {matchWinner,Ganhou},
+            RM ! {matchLoser,Perdeu},
+            erlang:cancel(Tref);
         gameOver ->
             io:format("Acabou o jogo ~n", []),
-            gameRoom(User1,User2,Tref)
+            gameRoom(User1,User2,Tref,RM);
+        newObject ->
+            Object =generateObject,
+            timer:send_after(10000  ,self(),newObject),
+            User1 ! {objeto,Object},
+            User1 ! {objeto,Object},
+            gameRoom(User1,User2,Tref,RM)
     end.
 
 rm(Rooms,Users) ->
@@ -141,6 +155,23 @@ rm(Rooms,Users) ->
         {mensagem,Data,From}->
             NewUsers = usersManager(Users,Data,self(),From),
             NewRooms = Rooms ;
+        {matchWinner,User,Nivel}->
+            {Pass,Nivel,Vitorias,true,From} = maps:get(User,Users),
+            if 
+                Vitorias +1 == 2 * Nivel ->
+                    NewNivel = Nivel +1;
+                true ->
+                    NewNivel = Nivel
+            end,
+            NewUsers = maps:update(User, {Pass,NewNivel,Vitorias+1,true,From}, Users),
+            NewRooms =Rooms ,
+            findGame(Users,User,Nivel,self()),
+            NewUsers = Users,
+            NewRooms = Rooms ; 
+        {matchLoser,User,Nivel}->
+            findGame(Users,User,Nivel,self()),
+            NewUsers = Users,
+            NewRooms = Rooms ;
         {newMatch,User1,User2}->
             io:format("Encontrei Partida\n"),
             {Pass1,Nivel1,Vitorias1,true,From1} = maps:get(User1,Users),
@@ -148,7 +179,7 @@ rm(Rooms,Users) ->
             {Pass,Nivel,Vitorias,true,From} = maps:get(User2,Users),
             NewUsers = maps:update(User2,{Pass,Nivel,Vitorias,false,From},Aux),
             NewRooms = Rooms ,
-            Room = spawn(fun()-> gameRoom([User1,Pass1,Nivel1,Vitorias1,From1],[User2,Pass,Nivel,Vitorias,From]) end),
+            Room = spawn(fun()-> gameRoom([User1,Pass1,Nivel1,Vitorias1,From1],[User2,Pass,Nivel,Vitorias,From],self()) end),
             Tref = timer:send_after(120000 ,Room,gameOver),
             Room ! {start,Tref},
             From1 ! {newGame, Room},
@@ -191,7 +222,9 @@ usersManager(Users,String,RM,From)->
     NewUsers.
 
 
-
+listagemVitorias(Users)->
+    List = maps:to_list(Users),
+    {lists:keysort(4, List)}.
 
 
 create_account(User,Pass,Map,From) ->
@@ -218,7 +251,6 @@ close_account(User,Pass,Map,From) ->
 
 login(User,Pass,Map,From) -> 
     [NewPass] = string:tokens(Pass, "\n"),
-    io:format("~s~n\n",[User ++ NewPass]),
     case maps:find(User,Map) of
         {ok,{NewPass,Nivel,Vitorias,false,_}} -> 
             From ! {line,"Users:sucessful\n"},
