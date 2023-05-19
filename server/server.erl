@@ -115,37 +115,62 @@ generateObject()->
 gameRoom(User1,User2,RM) ->
     receive
         {start,Tref}->
-            gameRoom(User1,User2,Tref)
+            Object =generateObject(),
+            {_,From,_,_,_,_,_,_, _,_} = User1,
+            {_,From1,_,_,_,_,_,_, _,_} = User2,
+            From ! {objeto,Object},
+            From1 ! {objeto,Object},
+            gameRoom(User1,User2,Tref,RM)
     
-        
-end.
+    end.
 
-gameRoom(User1,User2,Tref,RM) ->
-    Object =generateObject(),
+overtime(Users1,Users2,RM) ->
+    io:format("Entramos em tempo extra\n"),
+    receive
+        {playerOut,Ganhou,Perdeu} ->
+                RM ! {matchWinner,Ganhou},
+                RM ! {matchLoser,Perdeu};
+        newObject ->
+            Object =generateObject,
+            timer:send_after(10000  ,self(),newObject),
+            Users1 ! {objeto,Object},
+            Users2 ! {objeto,Object}
+    end.
+
+gameRoom(Users1,Users2,Tref,RM) ->
     timer:send_after(10000  ,self(),newObject),
-    User1 ! {objeto,Object},
-    User1 ! {objeto,Object},
+    {User1,From,Pontos,Posx,Posy,Nivel,Aceleracao,Velocidade, Ang,Boost} = Users1,
+    {User2,From1,Pontos1,Posx1,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1} = Users2,
 
      receive
         {line, Data} ->
             io:format("received ~p ~n", [Data]),
-            gameRoom(User1,User2,Tref,RM);
+            gameRoom(Users1,Users2,Tref,RM);
         {enter, _} ->
             io:format("user entered ~n", []),
-            gameRoom(User1,User2,Tref,RM);
+            gameRoom(Users1,Users2,Tref,RM);
         {playerOut,Ganhou,Perdeu}->
             RM ! {matchWinner,Ganhou},
             RM ! {matchLoser,Perdeu},
             erlang:cancel(Tref);
         gameOver ->
             io:format("Acabou o jogo ~n", []),
-            gameRoom(User1,User2,Tref,RM);
+            case Pontos > Pontos1 of
+                true ->
+                    RM ! {matchWinner,User1},
+                    RM ! {matchLoser,User2};
+                false ->
+                    RM ! {matchWinner,User2},
+                    RM ! {matchLoser,User1};
+                _ ->
+                    overtime(Users1,Users2,RM)
+            end;
         newObject ->
             Object =generateObject,
             timer:send_after(10000  ,self(),newObject),
-            User1 ! {objeto,Object},
-            User1 ! {objeto,Object},
-            gameRoom(User1,User2,Tref,RM)
+            Users1 ! {objeto,Object},
+            Users2 ! {objeto,Object},
+            gameRoom(Users1,Users2,Tref,RM)
     end.
 
 rm(Rooms,Users) ->
@@ -174,16 +199,19 @@ rm(Rooms,Users) ->
             NewRooms = Rooms ;
         {newMatch,User1,User2}->
             io:format("Encontrei Partida\n"),
-            {Pass1,Nivel1,Vitorias1,true,From1} = maps:get(User1,Users),
-            Aux = maps:update(User1,{Pass1,Nivel1,Vitorias1,false,From1},Users),
-            {Pass,Nivel,Vitorias,true,From} = maps:get(User2,Users),
-            NewUsers = maps:update(User2,{Pass,Nivel,Vitorias,false,From},Aux),
+            {Pass,Nivel,Vitorias,true,From} = maps:get(User1,Users),
+            Aux = maps:update(User1,{Pass,Nivel,Vitorias,false,From},Users),
+            {Pass1,Nivel1,Vitorias1,true,From1} = maps:get(User2,Users),
+            NewUsers = maps:update(User1,{Pass1,Nivel1,Vitorias1,false,From1},Aux),
             NewRooms = Rooms ,
-            Room = spawn(fun()-> gameRoom([User1,Pass1,Nivel1,Vitorias1,From1],[User2,Pass,Nivel,Vitorias,From],self()) end),
+            {Pontos, Posx, Posy, Aceleracao, Velocidade,Ang,Boost} = {0,0,0,0,0,0,0},
+            {Pontos1, Posx1, Posy1, Aceleracao1, Velocidade1,Ang1,Boost1} = {0,0,0,0,0,0,0},
+            Room = spawn(fun()-> gameRoom([User1,From,Pontos,Posx,Posy,Nivel,Aceleracao,Velocidade, Ang,Boost],
+                                        [User2,From1,Pontos1,Posx1,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1],self()) end),
             Tref = timer:send_after(120000 ,Room,gameOver),
             Room ! {start,Tref},
-            From1 ! {newGame, Room},
-            From ! {newGame, Room};
+            From ! {newGame, Room},
+            From1 ! {newGame, Room};
             %Talvez encontre erro no futuro de ter q atualizar o status pra true quando acabar a partida
         stop ->
             NewUsers = Users,
