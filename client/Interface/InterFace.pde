@@ -1,3 +1,11 @@
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.io.*;
+import java.net.*;
+
+
 float posx = 450;
 float posy = 450;
 float posxE = 100;
@@ -11,8 +19,40 @@ boolean keys0;
 float[] crystals = new float[16];
 float cNum = 0;
 
+void starto(){
+  
+  String host = "localhost";
+  int port = 1234;
+    
+  try{
+      Socket s = new Socket(host, port);
+      ConnectionManager cm = new ConnectionManager(s);
+            
+      cm.send("users", "create_account anotherone admin");
+            
+      new Thread(() -> {
+          try {
+              System.out.println("Qualquer coisa");
+              String res = cm.receive("Users");
+              System.out.println(res);
+          }
+          catch (Exception e) {
+               // TODO: handle exception
+          }
+      }).start();
+            
+      }catch(Exception e){
+         e.printStackTrace();
+         System.exit(0);
+      }
+  }
+
+
+
+
 void setup() {
-  size(900, 900);
+  starto();
+  size(1000, 1000);
   noStroke();
   keys0 = false;
   keys1 = false;
@@ -118,3 +158,70 @@ void keyReleased() {
     
   }
 }
+
+public class ConnectionManager
+{
+    Socket s;
+    BufferedReader in;
+    PrintWriter out ;
+    public ConnectionManager(Socket socket) throws IOException
+    {
+        try
+        {
+            this.s = socket;
+            this.in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+            this.out = new PrintWriter(s.getOutputStream());
+        }
+        catch(Exception e)
+        {
+
+        }
+
+    }
+
+    public void send(String type ,String message) throws IOException
+    {
+        try
+        {
+            out.println(type + ":" + message);
+            out.flush();
+        }
+        catch(Exception e)
+        {
+
+        }
+    }
+
+    public String receive(String type)throws IOException
+    {
+        String res = "";
+        try
+        {
+            
+            res = in.readLine();
+            
+            String[] arr = res.split(":");
+            
+            while(!type.equals(arr[0])) 
+            {
+                
+                res = in.readLine();            
+                arr = res.split(":");
+            }   
+        }
+        catch(Exception e) {
+
+        }
+        
+
+        return res ;
+    }
+
+    public void close() throws IOException
+    {
+        this.s.close();
+    }
+}
+
+
+
