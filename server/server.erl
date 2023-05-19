@@ -155,15 +155,17 @@ gameRoom(Users1,Users2,Tref,RM) ->
             erlang:cancel(Tref);
         gameOver ->
             io:format("Acabou o jogo ~n", []),
+            if 
+            Pontos == Pontos1 ->
+                overtime(Users1,Users2,RM)
+            end,
             case Pontos > Pontos1 of
                 true ->
                     RM ! {matchWinner,User1},
                     RM ! {matchLoser,User2};
                 false ->
                     RM ! {matchWinner,User2},
-                    RM ! {matchLoser,User1};
-                _ ->
-                    overtime(Users1,Users2,RM)
+                    RM ! {matchLoser,User1}
             end;
         newObject ->
             Object =generateObject,
