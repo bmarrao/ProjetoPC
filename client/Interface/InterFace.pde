@@ -19,14 +19,17 @@ boolean keys0;
 float[] crystals = new float[16];
 float cNum = 0;
 
+ConnectionManager cm;
+Socket s;
+
 void starto(){
   
   String host = "localhost";
   int port = 1234;
     
   try{
-      Socket s = new Socket(host, port);
-      ConnectionManager cm = new ConnectionManager(s);
+      s = new Socket(host, port);
+      cm = new ConnectionManager(s);
             
       cm.send("users", "create_account anotherone admin");
             
@@ -131,15 +134,18 @@ void draw() {
   drawMine();
   
 }
-
+//user
 void keyPressed() {
   if(key == 'W' || key == 'w'){
     keys0 = true;
+    cm.send("keyPressed","w");
   }
   else if(key == 'E' || key == 'e'){
     keys2 = true;
+    cm.send("keyPressed","e");
   }
   else if(key == 'Q' || key == 'q'){
+    cm.send("keyPressed","q");
     keys1 = true;
   }
 
@@ -149,12 +155,16 @@ void keyReleased() {
   
   if(key == 'W' || key == 'w'){
     keys0 = false;
+    cm.send("keyReleased","w");
   }
   else if(key == 'E' || key == 'e'){
     keys2 = false;
+    cm.send("keyReleased","e");
+
   }
   else if(key == 'Q' || key == 'q'){
     keys1 = false;
+    cm.send("keyReleased","w");
     
   }
 }
@@ -178,8 +188,8 @@ public class ConnectionManager
         }
 
     }
-
-    public void send(String type ,String message) throws IOException
+    //Precisa ser synchonized
+    public synchonized void send(String type ,String message) throws IOException
     {
         try
         {
