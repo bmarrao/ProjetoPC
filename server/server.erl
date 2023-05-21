@@ -110,7 +110,7 @@ user(Sock ,RM,Room) ->
 end.
 
 generateObject()->
-    {rand:uniform(3),rand:unifrom(),rand:uniform()}.
+    {rand:uniform(3),rand:uniform(),rand:uniform()}.
  
 gameTimer(Engine)->
     receive after 15 ->
@@ -250,8 +250,8 @@ gameRoom(User1,User2,RM) ->
 
     
 gameRoom(Users1,Users2,Tref,RM,Engine) ->
-    {User1,From1,Pontos1} = Users1,
-    {User2,From2,Pontos2} = Users2,
+    {User1,From1,Pontos1,Nivel1} = Users1,
+    {User2,From2,Pontos2,Nivel2} = Users2,
    
     receive
         {line,Data,From1} ->
@@ -393,10 +393,10 @@ usersManager(Users,String,RM,From)->
             [User,Pass] = string:tokens(Rest," "),
             case login(User,Pass,Users,From) of
                 {_, NewUsers,Nivel} ->
-                    io:format("OIIIIIIIII\n"),
+                    io:format("login com sucesso\n"),
                     findGame(Users,User,Nivel,RM);
                 {_,NewUsers} ->
-                    io:format("Algo de errado\n"),
+                    io:format("Login não teve sucesso\n"),
                     ok
             end;
         "logout " ++ User ->

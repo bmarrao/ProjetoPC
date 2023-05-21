@@ -5,12 +5,14 @@ Tiago;Rodrigues;0;8
 againmy;admin;0;9
 aindamaisum;admin;0;11
 algo;algodenovo;0;27
+anotherone;admin;1;0
 basdfae;admin;0;28
 brenin;admin;0;29
 maisum;admin;0;31
 myagain;admin;0;33
 outo;admin;0;37
 outrogajo;admin;0;2
+talsi;admin;1;0
 tata;admin;0;1
 tigabananas;admin;0;0
 tigas;admin;0;75
