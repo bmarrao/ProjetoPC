@@ -16,7 +16,6 @@ float vel = 0;
 boolean keys1;
 boolean keys2;
 boolean keys0;
-float objetos (cor,)
 float[] objetos = new float[16];
 float cNum = 0;
 boolean gameOver = False;
@@ -33,6 +32,23 @@ void starto(){
       cm = new ConnectionManager(s);
             
       cm.send("users", "create_account anotherone admin");
+            
+      new Thread(() -> {
+          try {
+              System.out.println("Qualquer coisa");
+              String res = cm.receive("Users");
+              System.out.println(res);
+          }
+          catch (Exception e) {
+               // TODO: handle exception
+          }
+      }).start();
+            
+      }catch(Exception e){
+         e.printStackTrace();
+         System.exit(0);
+      }
+      cm.send("users", "login anotherone admin");
             
       new Thread(() -> {
           try {
@@ -82,7 +98,9 @@ void setup() {
             String cor = vals[0];
             String x = vals[1];
             String y = vals[2];
-            objetos.append((Integer.parseInt(cor),Integer.parseInt(x),Integer.parseInt(y)));
+            objetos.append(Integer.parseInt(cor));
+            objetos.append(Integer.parseInt(x));
+            objetos.append(Integer.parseInt(y));
           }
       }).start();
 
