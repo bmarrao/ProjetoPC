@@ -16,9 +16,10 @@ float vel = 0;
 boolean keys1;
 boolean keys2;
 boolean keys0;
-float[] crystals = new float[16];
+float objetos (cor,)
+float[] objetos = new float[16];
 float cNum = 0;
-
+boolean gameOver = False;
 ConnectionManager cm;
 Socket s;
 
@@ -57,46 +58,65 @@ void setup() {
   starto();
   size(1000, 1000);
   noStroke();
+
   keys0 = false;
   keys1 = false;
   keys2 = false;
+  new Thread(() -> {
+          String res ;
+          while(!gameOver)
+          {
+            res = cm.receive("position");
+            String[] sep = res.split(" ");
+            drawMine(Integer.parseInt(sep[0]),Integer.parseInt(sep[1]));
+            drawEnemy(Integer.parseInt(sep[2]),Integer.parseInt(sep[3]));
+          }
+      }).start();
+    
+  new Thread(() -> {
+          String res ;
+          while(!gameOver)
+          {
+            res = cm.receive("newObject");
+            String[] vals = res.split(" ");
+            String cor = vals[0];
+            String x = vals[1];
+            String y = vals[2];
+            objetos.append((Integer.parseInt(cor),Integer.parseInt(x),Integer.parseInt(y)));
+          }
+      }).start();
+
+  new Thread(() -> {
+          String res ;
+          while(!gameOver)
+          {
+            res = cm.receive("gameOver");
+            if (res.equals("won"))
+            {
+              // 
+            }
+            else
+            {
+              //
+            }
+            gameOver = True;
+          }
+      }).start();
+
 }
 
-void keysAux(){
-  if(keys0 && keys2){
-    vel += 0.3;
-    ang += PI/32;
-  }
-  else if(keys0 && keys1){
-    vel += 0.3;
-    ang -= PI/32;
-  }
-  else if ( keys0) {  
-    vel += 0.3;
-  }
-  else if ( keys1) {
-    ang -= PI/32;
-  }
-  else if ( keys2) {
-    ang += PI/32;
-  }
-  
-  
-}
 
-void drawCrystals(){
-  crystals[0] = 300;
-  crystals[1] = 300;
+void drawObjects(){
   cNum = 1;
   for (int i = 0; i< cNum;i++){
-    quad(crystals[2*i]-25,crystals[2*i + 1]-25 ,crystals[2*i]+25,crystals[2*i + 1]-25,crystals[2*i]+25,crystals[2*i + 1]+25  ,crystals[2*i]-25,crystals[2*i + 1]+25);
+    quad(objetos[2*i]-25,objetos[2*i + 1]-25 ,objetos[2*i]+25,objetos[2*i + 1]-25,objetos[2*i]+25,objetos[2*i + 1]+25  ,objetos[2*i]-25,objetos[2*i + 1]+25);
   }
 }
 
-void drawEnemy(){
+void drawEnemy(int x, int y, int ang){
   pushMatrix();
-  translate(posxE, posyE);
-  rotate(angE);
+  translate(x, y);
+  rotate(ang);
   
   fill(150);
   triangle(40, 0, 0,  25, 0, -25);
@@ -105,9 +125,10 @@ void drawEnemy(){
   popMatrix();
 }
 
-void drawMine(){
+void drawMine(int x, int y, int ang){
   pushMatrix();
-  translate(posx, posy);
+  
+  translate(x, y);
   rotate(ang);
   
   keysAux();
@@ -115,11 +136,6 @@ void drawMine(){
   triangle(40, 0, 0,  25, 0, -25);
   fill(255,255,255);
   ellipse(0, 0, 50, 50);
-  if (vel >= 0){
-    posx += cos(ang)*vel;
-    posy += sin(ang)*vel;
-    vel -= 0.1;
-  }
   popMatrix();
 }
 
@@ -127,7 +143,7 @@ void drawMine(){
 void draw() {
   background(204);
 
-  drawCrystals();
+  drawObject();
   
   drawEnemy();
 
@@ -174,10 +190,12 @@ public class ConnectionManager
     Socket s;
     BufferedReader in;
     PrintWriter out ;
+
+    HashMap<String, String> typeMessage = new HashMap<String, String>();
+    
     public ConnectionManager(Socket socket) throws IOException
     {
-        try
-        {
+        try {
             this.s = socket;
             this.in = new BufferedReader(new InputStreamReader(s.getInputStream()));
             this.out = new PrintWriter(s.getOutputStream());
@@ -188,8 +206,7 @@ public class ConnectionManager
         }
 
     }
-    //Precisa ser synchonized
-    public synchonized void send(String type ,String message) throws IOException
+    public void send(String type ,String message) throws IOException
     {
         try
         {
@@ -202,33 +219,35 @@ public class ConnectionManager
         }
     }
 
-    public String receive(String type)throws IOException
+    public synchronized String receive(String type)throws IOException
     {
         String res = "";
-        try
-        {
-            
-            res = in.readLine();
-            
-            String[] arr = res.split(":");
-            
-            while(!type.equals(arr[0])) 
+        try 
+        {  
+          res = in.readLine();
+          String[] array = res.split(":");
+          typeMessage.put(arr[0],arr[1]);
+          String message = typeMessage.get(type);
+          if (!message)
+          {
+            notifyAll();
+            while(!message)
             {
-                
-                res = in.readLine();            
-                arr = res.split(":");
-            }   
+              message = typeMessage.get(type)
+              wait();
+            }
+          }
+        typeMessage.remove(type);
         }
         catch(Exception e) {
 
         }
         
 
-        return res ;
+        return message ;
     }
 
-    public void close() throws IOException
-    {
+    public void close() throws IOException{
         this.s.close();
     }
 }

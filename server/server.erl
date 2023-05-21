@@ -127,77 +127,105 @@ objectTimer(Engine)->
     end.
 
 engine(GameRoom,Users1,Users2,Objects)->
-    {User1,Posx,W,E,Q,Posy,Nivel,Aceleracao,Velocidade, Ang,Boost,Nboost} = Users1,
-    {User2,Posx1,W,E,Q,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1} = Users2,
+    {User1,Posx1,W1,E1,Q1,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1} = Users1,
+    {User2,Posx2,W2,E2,Q2,Posy2,Nivel2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2} = Users2,
     
     receive 
-        {keyPressed , Key ++ '\n' , User1} ->
+        {keyPressed , Key  , User1} ->
             case Key of
                 "w" ->
-                    engine(GameRoom,{User1,From,Posx,True,E,Q,Posy,Nivel,Aceleracao,Velocidade, Ang,Boost,Nboost},Objects);
+                    engine(GameRoom,{User1,Posx1,true,E1,Q1,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Users2,Objects);
                 "e" ->
-                    engine(GameRoom,{User1,From,Posx,W,True,Q,Posy,Nivel,Aceleracao,Velocidade, Ang,Boost,Nboost},Objects);
+                    engine(GameRoom,{User1,Posx1,W1,true,Q1,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Users2,Objects);
                 "q" ->
-                    engine(GameRoom,{User1,From,Posx,W,E,True,Posy,Nivel,Aceleracao,Velocidade, Ang,Boost,Nboost},Objects);
-        {keyReleased , Key ++ '\n' , User1} ->
+                    engine(GameRoom,{User1,Posx1,W1,E1,true,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Users2,Objects)
+                end;
+            
+        {keyReleased , Key  , User1} ->
             case Key of 
                 "w" ->
-                    engine(GameRoom,{User1,From,Posx,False,E,Q,Posy,Nivel,Aceleracao,Velocidade, Ang,Boost,Nboost},Objects);
+                    engine(GameRoom,{User1,Posx1,false,E1,Q1,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Users2,Objects);
                 "e" ->
-                    engine(GameRoom,{User1,From,Posx,W,False,Q,Posy,Nivel,Aceleracao,Velocidade, Ang,Boost,Nboost},Objects);
+                    engine(GameRoom,{User1,Posx1,W1,false,Q1,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Users2,Objects);
                 "q" ->
-                    engine(GameRoom,{User1,From,Posx,W,E,False,Posy,Nivel,Aceleracao,Velocidade, Ang,Boost,Nboost},Objects);   
-        {keyPressed , Key ++ '\n' , User2} ->
+                    engine(GameRoom,{User1,Posx1,W1,E1,false,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Users2,Objects)
+                end;   
+        {keyPressed , Key , User2} ->
             case Key of
                 "w" ->
-                    engine(GameRoom,{User2,From,Posx1,True,E,Q,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Objects);
+                    engine(GameRoom,Users1,{User2,Posx2,true,E2,Q2,Posy2,Nivel2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2},Objects);
                 "e" ->
-                    engine(GameRoom,{User2,From,Posx1,W,True,Q,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Objects);
+                    engine(GameRoom,Users1,{User2,Posx2,W2,true,Q2,Posy2,Nivel2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2},Objects);
                 "q" ->
-                    engine(GameRoom,{User2,From,Posx1,W,E,True,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Objects);
-        {keyReleased , Key ++ '\n' , User2} ->
+                    engine(GameRoom,Users1,{User2,Posx2,W2,E2,true,Posy2,Nivel2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2},Objects)
+                end;
+        {keyReleased , Key , User2} ->
             case Key of 
                 "w" ->
-                    engine(GameRoom,{User2,From,Posx1,False,E,Q,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Objects);
+                    engine(GameRoom,Users1,{User2,Posx2,false,E2,Q2,Posy2,Nivel2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2},Objects);
                 "e" ->
-                    engine(GameRoom,{User2,From,Posx1,W,False,Q,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost,Nboost1},Objects);
+                    engine(GameRoom,Users1,{User2,Posx2,W2,false,Q2,Posy2,Nivel2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2},Objects);
                 "q" ->
-                    engine(GameRoom,{User2,From,Posx1,W,E,False,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost,Nboost1},Objects);        
+                    engine(GameRoom,Users1,{User2,Posx2,W2,E2,false,Posy2,Nivel2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2},Objects) 
+                end;       
         {object,Objeto}->
             GameRoom ! {newObject, Objeto},
-            NewObjects = Object ++ [Objeto],
-            engine(GamerRoom,Users1,Users2,NewObjects);
+            NewObjects = Objects ++ [Objeto],
+            engine(GameRoom,Users1,Users2,NewObjects);
         timeout ->
-            case W of
-                True -> 
-                    NewAcc = Acc + 0.066;
-                False ->
+            case W1 of
+                rue -> 
+                    NewAcc1 = Aceleracao1 + 0.066;
+                false ->
                     %PRecisa testar se newACC > 0
-                    NewAcc = Acc - 0.09;
+                    NewAcc1 = Aceleracao1 - 0.09
+                
             end,
-            case {E,Q} of
-                {True,False} ->
-                    NewAng = Ang + PI/128;
-                {False,True} ->
-                    NewAng = Ang + PI/128;
+            case {E1,Q1} of
+                {true,false} ->
+                    NewAng1 = Ang1 + math:pi()/128;
+                {false,true} ->
+                    NewAng1 = Ang1 +  math:pi()/128;
                 _ ->
-                    NewAng = Ang
+                    NewAng1 = Ang1
+            end,
+
+            case W2 of
+                true -> 
+                    NewAcc2 = Aceleracao2 + 0.066;
+                false ->
+                    %PRecisa testar se newACC > 0
+                    NewAcc2 = Aceleracao2 - 0.09
+            end,
+            case {E2,Q2} of
+                {true,false} ->
+                    NewAng2 = Ang2 + math:pi()/128;
+                {false,true} ->
+                    NewAng2 = Ang2 +  math:pi()/128;
+                _ ->
+                    NewAng2 = Ang2
             end,
                 
-            NewVel = Velocidade + NewAcc*0.066,
-            newX1 = 
-            
+            NewVel1 = Velocidade1 + NewAcc1*0.066,
+            NewVel2 = Velocidade2 + NewAcc2*0.066,
+
+            NewX1 = Posx1 + math:cos(NewAng1)*NewVel1,
+            NewY1 = Posy1 + math:sin(NewAng1)*NewVel1,
+            NewX2 = Posx2 + math:cos(NewAng2)*NewVel2,
+            NewY2 = Posy2 + math:sin(NewAng2)*NewVel2,
 
 
-            {NewBoost,Objeto1} = conflitObjeto(Objects,NewX1,NewY1,Boost,Nboost),
-            {NewBoost1,Objeto2} = conflitObjeto(Objects,NewX2,NewY2,Boost,Nboost1),
-            NewObjects = lists:delete(Objeto1,Objects),
-            NewOBjects1 = lists:delete(Objeto2,NewObjects),
+            %{NewBoost,Objeto1} = conflitObjeto(Objects,NewX1,NewY1,Boost,Nboost),
+            %{NewBoost1,Objeto2} = conflitObjeto(Objects,NewX2,NewY2,Boost,Nboost1),
+            %NewObjects = lists:delete(Objeto1,Objects),
+            %NewOBjects1 = lists:delete(Objeto2,NewObjects),
+            GameRoom ! {newPositions, {User1,NewX1,NewY1,NewAng1},{User2,NewX2,NewY2,NewAng2}},
+            engine(GameRoom,{User2,Posx2,W2,E2,false,Posy2,Nivel2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2},Objects);
 
-            GameRoom ! {newPositions, {User1,NewX1,NewY1},{User2,NewX2,NewY2}},
         gameOver ->
             ok
-        end.
+        
+    end.
 
                 
 gameRoom(User1,User2,RM) ->
@@ -211,7 +239,7 @@ gameRoom(User1,User2,RM) ->
             From1 ! {objeto,Object},
             {Pontos, Posx, Posy, Aceleracao, Velocidade,Ang,Boost} = {0,0,0,0,0,0,0},
             {Pontos1, Posx1, Posy1, Aceleracao1, Velocidade1,Ang1,Boost1} = {0,0,0,0,0,0,0},
-            Engine = spawn(fun()->{self({User1,Posx,Posy,Nivel,Aceleracao,Velocidade, Ang,Boost},{User2,Posx1,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1},self()),}),
+            Engine = spawn(fun()->engine({User1,Posx,Posy,Nivel,Aceleracao,Velocidade, Ang,Boost},{User2,Posx1,Posy1,Nivel1,Aceleracao1,Velocidade1, Ang1,Boost1},self())end),
             spawn(fun() -> gameTimer(Engine) end),
             spawn(fun() -> objectTimer(Engine) end),
             gameRoom(User1,User2,Tref,RM,Engine)
@@ -221,8 +249,8 @@ gameRoom(User1,User2,RM) ->
 
     
 gameRoom(Users1,Users2,Tref,RM,Engine) ->
-    {User1,From1,Pontos1} = Users1,
-    {User2,From2,Pontos2} = Users2,
+    {User1,From1,Pontos1,Nivel1} = Users1,
+    {User2,From2,Pontos2,Nivel2} = Users2,
    
     receive
         {line,Data,From1} ->
@@ -244,13 +272,17 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
         {enter, _} ->
             io:format("user entered ~n", []),
             gameRoom(Users1,Users2,Tref,RM,Engine);
-        {playerOut,Ganhou,Perdeu}->
-            RM ! {matchWinner,Ganhou},
-            RM ! {matchLoser,Perdeu},
+        {playerOut,User1,User2}->
+            RM ! {matchWinner,User1,Nivel1,From1},
+            RM ! {matchLoser,User2,Nivel2,From2},
             erlang:cancel(Tref);
-        {newPositions, {User1,NewX1,NewY1},{User2,NewX2,NewY2}}->
-            From1 ! {line,"position:"++ NewX1 ++ " "++ NewY1 ++ " " ++ NewX2 ++ " " ++ NewY2++ "\n"},
-            From2 ! {line,"position:"++ NewX2 ++ " "++ NewY2 ++ " " ++ NewX1 ++ " " ++ NewY1++ "\n"};
+        {playerOut,User2,User1}->
+            RM ! {matchWinner,User2,Nivel1,From1},
+            RM ! {matchLoser,User1,Nivel2,From2},
+            erlang:cancel(Tref);
+        {newPositions, {User1,NewX1,NewY1,NewAng1},{User2,NewX2,NewY2,NewAng2}}->
+            From1 ! {line,"position:"++ NewX1 ++ " "++ NewY1 ++ " " ++ NewAng1 ++ " " ++ NewX2 ++ " " ++ NewY2++ " " ++ NewAng2 ++  "\n"},
+            From2 ! {line,"position:"++ NewX2 ++ " "++ NewY2 ++ " "  ++ NewAng2 ++ " "++ NewX1 ++ " " ++ NewY1++ " " ++ NewAng1 ++"\n"};
         {newObject, {Cor,X,Y}}->
             From1 ! {line , "object:" ++ Cor ++ " " ++ X ++ " " ++ Y ++ "\n"},
             From2 ! {line , "object:" ++ Cor ++ " " ++ X ++ " " ++ Y ++ "\n"};
@@ -263,11 +295,11 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
             end,
             case Pontos1 > Pontos2 of
                 true ->
-                    RM ! {matchWinner,User1},
-                    RM ! {matchLoser,User2};
+                    RM ! {matchWinner,User1,Nivel1,From1},
+                    RM ! {matchLoser,User2,Nivel2,From2};
                 false ->
-                    RM ! {matchWinner,User2},
-                    RM ! {matchLoser,User1}
+                    RM ! {matchWinner,User1,Nivel1,From1},
+                    RM ! {matchLoser,User2,Nivel2,From2}
             end
         
     end.
@@ -302,7 +334,7 @@ rm(Rooms,Users) ->
         {mensagem,Data,From}->
             NewUsers = usersManager(Users,Data,self(),From),
             NewRooms = Rooms ;
-        {matchWinner,User,Nivel}->
+        {matchWinner,User,Nivel,From}->
             {Pass,Nivel,Vitorias,true,From} = maps:get(User,Users),
             if 
                 Vitorias +1 == 2 * Nivel ->
@@ -314,11 +346,14 @@ rm(Rooms,Users) ->
             NewRooms =Rooms ,
             findGame(Users,User,Nivel,self()),
             NewUsers = Users,
-            NewRooms = Rooms ; 
-        {matchLoser,User,Nivel}->
+            NewRooms = Rooms ,
+            From ! {line, "gameOver:won"};
+        {matchLoser,User,Nivel,From}->
             findGame(Users,User,Nivel,self()),
             NewUsers = Users,
-            NewRooms = Rooms ;
+            NewRooms = Rooms ,
+            From ! {line, "gameOver:lost"};
+        
         {newMatch,User1,User2}->
             io:format("Encontrei Partida\n"),
             {Pass,Nivel,Vitorias,true,From} = maps:get(User1,Users),
