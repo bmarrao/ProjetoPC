@@ -8,7 +8,7 @@ acharOnline(Map,Nivel)-> [User ||{User,{_,Nivel,_,true,_}} <- maps:to_list(Map)]
 findGame(Map, User,Nivel,RM)->
     io:format("Achar jogo\n"),
     Lista = acharOnline(Map,Nivel),
-    io:format("~s~nTesteOla",[Lista]),
+    io:format("Lista \n",[Lista]),
     Tamanho = length(Lista),
     if
         (Tamanho < 1) ->
@@ -73,7 +73,7 @@ server(Port,File) ->
 
 
 acceptor(LSock, RM) ->
-    io:format("Acceptor"),
+    io:format("Acceptor\n"),
     {ok, Sock} = gen_tcp:accept(LSock),
     spawn(fun() -> acceptor(LSock,RM) end),
     user(Sock, RM,RM).
@@ -82,13 +82,13 @@ acceptor(LSock, RM) ->
 user(Sock ,RM,Room) ->
     receive
         {line, Data} ->
-            io:format("Dou print \n"),
+            io:format("Sending data \n"),
             gen_tcp:send(Sock, Data),
             user(Sock, RM,Room);
         {tcp, _, Data} ->
             case Data of
                 "users:" ++ Rest ->
-                    io:format("Recebi algo\n"),
+                    io:format("Received user \n"),
                     RM ! {mensagem, Rest,self()};
                 _ ->
                     Room ! {line,Data}
@@ -380,7 +380,7 @@ usersManager(Users,String,RM,From)->
 
     case String of 
         "create_account " ++ Rest ->
-            io:format("Create ACcount\n"),
+            io:format("Create Account\n"),
             [User,Pass] = string:tokens(Rest," "),
             NewPass = re:replace(Pass, "\n" , "", [global, {return, list}]),
             {_, NewUsers} = create_account(User,NewPass,Users,From);
