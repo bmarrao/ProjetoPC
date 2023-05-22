@@ -8,7 +8,7 @@ acharOnline(Map,Nivel)-> [User ||{User,{_,Nivel,_,true,_}} <- maps:to_list(Map)]
 findGame(Map, User,Nivel,RM)->
     io:format("Achar jogo\n"),
     Lista = acharOnline(Map,Nivel),
-    io:format("Lista \n",[Lista]),
+    %io:format("Lista \n",[Lista]),
     Tamanho = length(Lista),
     if
         (Tamanho < 1) ->
@@ -238,9 +238,9 @@ gameRoom(User1,User2,RM) ->
             {_,From1,_,_} = User2,
             From ! {objeto,Object},
             From1 ! {objeto,Object},
-            { Posx, Posy, Aceleracao, Velocidade,Ang,Boost} = {0,0,0,0,0,0},
-            { Posx1, Posy1, Aceleracao1, Velocidade1,Ang1,Boost1} = {0,0,0,0,0,0},
-            Engine = spawn(fun()->engine(GameRoom,{User1,Posx,Posy,Aceleracao,Velocidade, Ang,Boost},{User2,Posx1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1},self()) end),
+            { NewUser1,Posx1,W1,Q1,E1, Posy1, Aceleracao1, Velocidade1,Ang1,Boost1,Nboost1} = {User1,0,false,false,false,0,0,0,0,0,0},
+            { NewUser2,Posx2,W2,Q2,E2, Posy2, Aceleracao2, Velocidade2,Ang2,Boost2,Nboost2} = {User2,0,false,false,false,0,0,0,0,0,0},
+            Engine = spawn(fun()->engine(GameRoom,{ NewUser1,Posx1,W1,Q1,E1, Posy1, Aceleracao1, Velocidade1,Ang1,Boost1,Nboost1}, { NewUser2,Posx2,W2,Q2,E2, Posy2, Aceleracao2, Velocidade2,Ang2,Boost2,Nboost2},self()) end),
             spawn(fun() -> gameTimer(Engine) end),
             spawn(fun() -> objectTimer(Engine) end),
             gameRoom(User1,User2,Tref,RM,Engine)
@@ -271,7 +271,7 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
             end,
             gameRoom(Users1,Users2,Tref,RM,Engine);
         {enter, _} ->
-            io:format("user entered ~n", []),
+            io:format("gameRoom start ~n", []),
             gameRoom(Users1,Users2,Tref,RM,Engine);
         {playerOut,User1,User2}->
             RM ! {matchWinner,User1,From1},
