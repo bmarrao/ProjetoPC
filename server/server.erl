@@ -90,8 +90,14 @@ user(Sock ,RM,Room) ->
                 "users:" ++ Rest ->
                     io:format("Received user \n"),
                     RM ! {mensagem, Rest,self()};
+                "keyPressed:" ++ Rest->
+                    %io:format("Received keypress \n"),
+                    Room ! {keyp,Rest,self()};
+                "keyReleased:" ++ Rest->
+                    %io:format("Received keypress \n"),
+                    Room ! {keyr,Rest,self()};
                 _ ->
-                    io:format("Received ~s~n\n", [Data]),
+                    io:format("Received ~s~n", [Data]),
                     Room ! {line,Data}
                 end, 
             user(Sock,RM,Room);
@@ -127,48 +133,64 @@ objectTimer(Engine)->
     end.
 
 engine(GameRoom,Users1,Users2,Objects)->
-    {User1,Posx1,W1,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1} = Users1,
-    {User2,Posx2,W2,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2} = Users2,
+    {User1,Posx1,W1,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1,From1} = Users1,
+    {User2,Posx2,W2,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2} = Users2,
     
     receive 
-        {keyPressed , Key  , User1} ->
+        {keyPressed , Key  , Pid} ->
+
+            io:format("teste keyp u1\n"),
+            if 
+                Pid == From1->
+                    
+                    case Key of
+                        "w\n" ->
+                            engine(GameRoom,{User1,Posx1,true,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1,From1},Users2,Objects);
+                        "e\n" ->
+                            engine(GameRoom,{User1,Posx1,W1,true,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1,From1},Users2,Objects);
+                        "q\n" ->
+                            engine(GameRoom,{User1,Posx1,W1,E1,true,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1,From1},Users2,Objects)
+                        end;
+                    
+                    
+                
+                Pid == From2 ->
+                       
+                    case Key of
+                        "w\n" ->
+                            engine(GameRoom,Users1,{User2,Posx2,true,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2},Objects);
+                        "e\n" ->
+                            engine(GameRoom,Users1,{User2,Posx2,W2,true,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2},Objects);
+                        "q\n" ->
+                            engine(GameRoom,Users1,{User2,Posx2,W2,E2,true,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2},Objects)
+                        end
+                            
+                    end;
             
-            case Key of
-                "w" ->
-                    engine(GameRoom,{User1,Posx1,true,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Users2,Objects);
-                "e" ->
-                    engine(GameRoom,{User1,Posx1,W1,true,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Users2,Objects);
-                "q" ->
-                    engine(GameRoom,{User1,Posx1,W1,E1,true,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Users2,Objects)
-                end;
-            
-        {keyReleased , Key  , User1} ->
-            case Key of 
-                "w" ->
-                    engine(GameRoom,{User1,Posx1,false,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Users2,Objects);
-                "e" ->
-                    engine(GameRoom,{User1,Posx1,W1,false,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Users2,Objects);
-                "q" ->
-                    engine(GameRoom,{User1,Posx1,W1,E1,false,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1},Users2,Objects)
-                end;   
-        {keyPressed , Key , User2} ->
-            case Key of
-                "w" ->
-                    engine(GameRoom,Users1,{User2,Posx2,true,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2},Objects);
-                "e" ->
-                    engine(GameRoom,Users1,{User2,Posx2,W2,true,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2},Objects);
-                "q" ->
-                    engine(GameRoom,Users1,{User2,Posx2,W2,E2,true,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2},Objects)
-                end;
-        {keyReleased , Key , User2} ->
-            case Key of 
-                "w" ->
-                    engine(GameRoom,Users1,{User2,Posx2,false,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2},Objects);
-                "e" ->
-                    engine(GameRoom,Users1,{User2,Posx2,W2,false,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2},Objects);
-                "q" ->
-                    engine(GameRoom,Users1,{User2,Posx2,W2,E2,false,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2},Objects) 
-                end;       
+        {keyReleased , Key  , Pid} ->
+            if
+                Pid == From1->
+                    io:format("teste keyr u1\n"),
+                    case Key of 
+                        "w\n" ->
+                            engine(GameRoom,{User1,Posx1,false,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1,From1},Users2,Objects);
+                        "e\n" ->
+                            engine(GameRoom,{User1,Posx1,W1,false,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1,From1},Users2,Objects);
+                        "q\n" ->
+                            engine(GameRoom,{User1,Posx1,W1,E1,false,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1,From1},Users2,Objects)
+                    end;   
+                Pid == From2 ->
+                    io:format("teste keyp u2\n"),
+                    case Key of
+                        "w\n" ->
+                            engine(GameRoom,Users1,{User2,Posx2,false,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2},Objects);
+                        "e\n" ->
+                            engine(GameRoom,Users1,{User2,Posx2,W2,false,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2},Objects);
+                        "q\n" ->
+                            engine(GameRoom,Users1,{User2,Posx2,W2,E2,false,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2},Objects)
+                        end
+                    end;
+         
         {object,Objeto}->
             GameRoom ! {newObject, Objeto},
             NewObjects = Objects ++ [Objeto],
@@ -180,10 +202,10 @@ engine(GameRoom,Users1,Users2,Objects)->
                     NewAcc1 = Aceleracao1 + 0.066;
                 false ->
                     if 
-                        Aceleracao1<0->
+                        0.09>=Aceleracao1->
 
                             NewAcc1 = 0;
-                        true ->
+                        Aceleracao1>0.09 ->
                             NewAcc1 = Aceleracao1 - 0.09
                 end
                   
@@ -203,12 +225,13 @@ engine(GameRoom,Users1,Users2,Objects)->
                     NewAcc2 = Aceleracao2 + 0.066;
                 false ->
                     if 
-                        Aceleracao2<0->
+                        0.09>=Aceleracao2->
 
                             NewAcc2 = 0;
-                        true ->
+                        Aceleracao2>0.09 ->
                             NewAcc2 = Aceleracao2 - 0.09
                 end
+                  
             end,
             case {E2,Q2} of
                 {true,false} ->
@@ -234,7 +257,7 @@ engine(GameRoom,Users1,Users2,Objects)->
             %NewOBjects1 = lists:delete(Objeto2,NewObjects),
              
             GameRoom ! {newPositions, {User1,NewX1,NewY1,NewAng1},{User2,NewX2,NewY2,NewAng2}},
-            engine(GameRoom,{User1,NewX1,W1,E1,Q1,NewY1,NewAcc1,NewVel1, NewAng1,Boost1,Nboost1},{User2,NewX2,W2,E2,Q2,NewY2,NewAcc2,NewVel2, NewAng2,Boost2,Nboost2},Objects);
+            engine(GameRoom,{User1,NewX1,W1,E1,Q1,NewY1,NewAcc1,NewVel1, NewAng1,Boost1,Nboost1,From1},{User2,NewX2,W2,E2,Q2,NewY2,NewAcc2,NewVel2, NewAng2,Boost2,Nboost2,From2},Objects);
 
         gameOver ->
             ok
@@ -243,14 +266,17 @@ engine(GameRoom,Users1,Users2,Objects)->
 
                 
 gameRoom(User1,User2,RM) ->
+    
     GameRoom = self(),
+    {Users1,From1,_,_} = User1,
+    {Users2,From2,_,_} = User2,
     receive
         {start,Tref}->
             Object =generateObject(),
             GameRoom ! {newObject,Object},
             {Posx1,W1,Q1,E1, Posy1, Aceleracao1, Velocidade1,Ang1,Boost1,Nboost1} = {0.0,false,false,false,0.0,0.0,0.0,0.0,0.0,0.0},
             {Posx2,W2,Q2,E2, Posy2, Aceleracao2, Velocidade2,Ang2,Boost2,Nboost2} = {0.0,false,false,false,0.0,0.0,0.0,0.0,0.0,0.0},
-            Engine = spawn(fun()->engine(GameRoom,{ User1,Posx1,W1,Q1,E1, Posy1, Aceleracao1, Velocidade1,Ang1,Boost1,Nboost1}, { User2,Posx2,W2,Q2,E2, Posy2, Aceleracao2, Velocidade2,Ang2,Boost2,Nboost2},[Object]) end),
+            Engine = spawn(fun()->engine(GameRoom,{ Users1,Posx1,W1,Q1,E1, Posy1, Aceleracao1, Velocidade1,Ang1,Boost1,Nboost1,From1}, { Users2,Posx2,W2,Q2,E2, Posy2, Aceleracao2, Velocidade2,Ang2,Boost2,Nboost2,From2},[Object]) end),
             spawn(fun() -> gameTimer(Engine) end),
             spawn(fun() -> objectTimer(Engine) end),
             gameRoom(User1,User2,Tref,RM,Engine)
@@ -264,22 +290,49 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
     {User2,From2,Pontos2,Nivel2} = Users2,
    
     receive
-        {line,Data,From1} ->
-            case Data of
-                "keyPressed" ++ Rest ->
-                    Engine ! {keypressed, Rest,User1};
-                "KeyRealesed" ++ Rest ->
-                    Engine ! {keyReleased ,Rest,User1}
+        {keyp,Data,Pid} ->
+            %io:format("Pattern recognized ~p~n",[Pid]),
+            
+            %io:format("user ~p~n",[User1]),
+            
+            if 
+                Pid == From1->
+                    
+                    
+                    Engine ! {keyPressed, Data,From1};
+                    
+                    
+                
+                Pid == From2 ->
+                       
+                    
+                    Engine ! {keyPressed, Data,From2}
+                            
+                    
             end,
             gameRoom(Users1,Users2,Tref,RM,Engine);
-        {line,Data,From2} ->
-            case Data of
-                "keyPressed" ++ Rest ->
-                    Engine ! {keypressed, Rest,User2};
-                "KeyRealesed" ++ Rest ->
-                    Engine ! {keyReleased ,Rest,User2}
-            end,
-            gameRoom(Users1,Users2,Tref,RM,Engine);
+
+            {keyr,Data,Pid} ->
+                %io:format("Pattern recognized ~p~n",[Pid]),
+                
+                %io:format("user ~p~n",[User1]),
+                
+                if 
+                    Pid == From1->
+                        
+                        
+                        Engine ! {keyReleased, Data,From1};
+                        
+                        
+                    
+                    Pid == From2 ->
+                           
+                        
+                        Engine ! {keyReleased, Data,From2}
+                                
+                        
+                end,
+                gameRoom(Users1,Users2,Tref,RM,Engine);
         {enter, _} ->
             io:format("gameRoom start ~n", []),
             gameRoom(Users1,Users2,Tref,RM,Engine);
