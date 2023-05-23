@@ -6,13 +6,13 @@ import java.io.*;
 import java.net.*;
 
 
-float posx = 0;
-float posy = 0;
-float posxE = 0;
-float posyE = 0;
-float angE = 0;
-float ang = 0;
-float vel = 0;
+float posx ;
+float posy ;
+float posxE ;
+float posyE ;
+float angE ;
+float ang ;
+float vel ;
 boolean keys1;
 boolean keys2;
 boolean keys0;
@@ -76,46 +76,58 @@ void setup() {
   keys0 = false;
   keys1 = false;
   keys2 = false;
-    new Thread(() -> {
-          try{
-            while(!gameOver){ notifyAll();
-            Thread.sleep(10);
-            }
-          }catch(Exception e){
-            
-          }
-        }).start();
-  
+
     new Thread(() -> {
           try{
             String res ;
             while(!gameOver)
             {
-              res = cm.receive("position");
-              System.out.println("recebi posicao");
-              System.out.println(res,"pos");
-              String[] sep = res.split(" ");
-              posx =Float.parseFloat(sep[0]);
-              posy =Float.parseFloat(sep[1]);
-              ang = Float.parseFloat(sep[2]);
-              posxE =Float.parseFloat(sep[3]);
-              posyE = Float.parseFloat(sep[4]);
-              angE = Float.parseFloat(sep[5]);
+              res = cm.receive("game");
               
+             
+              
+              if(!(res == null))
+              {
+                //System.out.println("recebi posicao");
+                //System.out.println(res+"pos");
+                String[] sep = res.split(" ");
+                if (sep[0].equals("position")){
+                  posx =Float.parseFloat(sep[1]);
+                  posy =Float.parseFloat(sep[2]);
+                  ang = Float.parseFloat(sep[3]);
+                  posxE =Float.parseFloat(sep[4]);
+                  posyE = Float.parseFloat(sep[5]);
+                  angE = Float.parseFloat(sep[6]);
+                }
+                else{
+                  
+                  String cor = sep[1];
+                  String x = sep[2];
+                  String y = sep[3];
+                  objetos.add(Float.parseFloat(cor)); 
+                  objetos.add(Float.parseFloat(x));
+                  objetos.add(Float.parseFloat(y));
+                }
+              }
             }
           }catch(Exception e){
-            
+            System.out.println("Thread crashou POs");
           }
         }).start();
-      
+    /*
     new Thread(() -> {
       try{
             String res ;
             while(!gameOver)
             {
-              res = cm.receive("object");
-              System.out.println("recebi objecto");
-              System.out.println(res , "obj");
+              
+              res = cm.receive("object",9000);
+              
+              
+              if (!(res == null))
+              {
+              //System.out.println("recebi objecto");
+              //System.out.println(res+"object");
               String[] vals = res.split(" ");
               String cor = vals[0];
               String x = vals[1];
@@ -123,13 +135,14 @@ void setup() {
               objetos.add(Float.parseFloat(cor)); 
               objetos.add(Float.parseFloat(x));
               objetos.add(Float.parseFloat(y)); 
-              
+              }
             }
       }catch(Exception e){
-        
+        System.out.println("Thread crashou Object");
       }
         }).start();
-
+    */
+    /*
     new Thread(() -> 
     {
       try
@@ -152,9 +165,10 @@ void setup() {
       }
       catch(Exception e)
       {
-
+        System.out.println("Thread crashou");
       }
         }).start();
+        */
 }
 
 
@@ -168,6 +182,7 @@ void drawObjects(){
     quad(objetos[2*i]-25,objetos[2*i + 1]-25 ,objetos[2*i]+25,objetos[2*i + 1]-25,objetos[2*i]+25,objetos[2*i + 1]+25  ,objetos[2*i]-25,objetos[2*i + 1]+25);
   }
   */
+  
 }
 
 
@@ -179,7 +194,7 @@ void drawEnemy(){
   
   fill(150);
   triangle(40, 0, 0,  25, 0, -25);
-  fill(255,255,255);
+  fill(255,0,0);
   ellipse(0, 0, 50, 50);
   popMatrix();
 }
@@ -193,7 +208,7 @@ void drawMine(){
 
   fill(150);
   triangle(40, 0, 0,  25, 0, -25);
-  fill(255,255,255);
+  fill(0,0,255);
   ellipse(0, 0, 50, 50);
   popMatrix();
 }
@@ -203,6 +218,7 @@ void draw() {
   background(204);
   drawEnemy();
   drawMine();
+  drawObjects();
 }
 
 
@@ -239,7 +255,7 @@ void keyReleased() {
   else if(key == 'Q' || key == 'q'){
     
     keys1 = false;
-    cm.send("keyReleased","w");
+    cm.send("keyReleased","q");
     
   }
 }
@@ -288,10 +304,9 @@ public class ConnectionManager
           String[] array = res.split(":");
           typeMessage.put(array[0],array[1]);
           message = typeMessage.get(type);
-          while(message.equals(null))
-          {
-            notifyAll();
-            wait();
+          while(message.equals(null)){ 
+            
+            
             message = typeMessage.get(type);
           }
             notifyAll();

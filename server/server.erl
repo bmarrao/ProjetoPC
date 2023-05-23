@@ -187,17 +187,44 @@ maiorNoventa(Ang)->
     end,
     NewAng.
 checkColision(NewX1,NewY1,NewAng1,NewX2,NewY2,NewAng2)->
-    Normal11 = maiorNoventa(NewAng1 + math:pi()/2),
-    Normal12 = maiorNoventa(NewAng1 - math:pi()/2),
-    Normal21 = maiorNoventa(NewAng2 + math:pi()/2),
-    Normal22 = maiorNoventa(NewAng2 - math:pi()/2),
-
-
-.
-atingiuObjeto (Objetos,X,Y)->
-    [{Cor,XObj,YObj}||{Cor,XObj,YObj} <- Objetos, ].
+    %Normal11 = maiorNoventa(NewAng1 + math:pi()/2),
+    %Normal12 = maiorNoventa(NewAng1 - math:pi()/2),
+    %Normal21 = maiorNoventa(NewAng2 + math:pi()/2),
+    %Normal22 = maiorNoventa(NewAng2 - math:pi()/2),
 
     
+    
+    ColisionX = (NewX1 - NewX2),
+    ColisionY = (NewY1 - NewY2),
+    AngInc = math:atan2(ColisionX, ColisionY) * 180/math:pi(),
+    Ang1Aux = maiorNoventa(AngInc-NewAng1),
+    Ang2Aux =maiorNoventa(AngInc-NewAng2),
+    Pi = math:pi()/2,
+    if 
+        Pi > Ang1Aux ->
+            pontoP2;
+        Pi > Ang2Aux ->
+            pontoP1;
+        true ->
+            collision
+end.
+
+    
+
+
+
+atingiuObjeto ([H | T],X,Y)->
+    {Cor, Xobj ,Yobj} = H ,
+    DistAux = math:pow((X -Xobj),2) + math:pow((Y -Yobj),2),
+    Dist = math:sqrt(DistAux),
+    if 
+        100>Dist->
+            {Cor,Xobj,Yobj};
+        true ->
+            atingiuObjeto(T, X, Y)
+    end;
+
+atingiuObjeto ([],_,_)-> [].
 engine(GameRoom,Users1,Users2,Objects)->
     {User1,Posx1,W1,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1,From1} = Users1,
     {User2,Posx2,W2,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2} = Users2,
@@ -260,7 +287,7 @@ engine(GameRoom,Users1,Users2,Objects)->
             if 
                 From == From1->
                     engine(GameRoom,{User1,Posx1,true,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1-Boost,Nboost1-1,From1},Users2,Objects);
-                Pid == From2 ->
+                From == From2 ->
                     engine(GameRoom,Users1,{User2,Posx2,false,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2-Boost,Nboost2-1,From2},Objects)
             end;
         {object,Objeto}->
@@ -317,6 +344,10 @@ engine(GameRoom,Users1,Users2,Objects)->
                     NewAng2 = Ang2
             end,
             if 
+                -2>Velocidade1->
+                    NewVel1 = -2;
+                -0.5>=Velocidade1->
+                    NewVel1 = Velocidade1+ 0.066;
                 0>=Velocidade1->
                     NewVel1 = 0;
                 true ->
@@ -324,6 +355,10 @@ engine(GameRoom,Users1,Users2,Objects)->
                     NewVel1 = Velocidade1 + NewAcc1*0.066 - 0.066
             end,
             if 
+                -2>Velocidade2->
+                    NewVel2 = -2;
+                -0.5>=Velocidade2->
+                    NewVel2 = Velocidade2+ 0.066;
                 0>=Velocidade2->
                     NewVel2 = 0;
                 true ->
@@ -338,37 +373,88 @@ engine(GameRoom,Users1,Users2,Objects)->
             NewY2 = Posy2 + math:sin(NewAng2)*NewVel2,
             DistAux = math:pow((NewX1 -NewX2),2) + math:pow((NewY1 -NewY2),2),
             Dist = math:sqrt(DistAux),
+            %{User1,Posx1,W1,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1,From1} = Users1,
+            %{User2,Posx2,W2,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2} = Users2,
             if 
                 50>Dist->
                     case checkColision(NewX1,NewY1,NewAng1,NewX2,NewY2,NewAng2) of
                         pontoP1->
-                            ;
+                            {Posx11,W11,Q11,E11, Posy11, Aceleracao11, Velocidade11,Ang11,Boost11,Nboost11} = {250,false,false,false,250,0.0,0.0,0.0,0.0,0.0},
+                            {Posx22,W22,Q22,E22, Posy22, Aceleracao22, Velocidade22,Ang22,Boost22,Nboost22} = {750,false,false,false,750,0.0,0.0,math:pi(),0.0,0.0},
+                            GameRoom ! {ponto,From1},
+                            engine(GameRoom,{User1,Posx11,W11,Q11,E11, Posy11, Aceleracao11, Velocidade11,Ang11,Boost11,Nboost11,From1},{User2,Posx22,W22,Q22,E22, Posy22, Aceleracao22, Velocidade22,Ang22,Boost22,Nboost22,From2},Objects);
                         pontoP2->
-                    end
+                            {Posx11,W11,Q11,E11, Posy11, Aceleracao11, Velocidade11,Ang11,Boost11,Nboost11} = {250,false,false,false,250,0.0,0.0,0.0,0.0,0.0},
+                            {Posx22,W22,Q22,E22, Posy22, Aceleracao22, Velocidade22,Ang22,Boost22,Nboost22} = {750,false,false,false,750,0.0,0.0,math:pi(),0.0,0.0},
+                            GameRoom ! {ponto,From2},
+                            engine(GameRoom,{User1,Posx11,W11,Q11,E11, Posy11, Aceleracao11, Velocidade11,Ang11,Boost11,Nboost11,From1},{User2,Posx22,W22,Q22,E22, Posy22, Aceleracao22, Velocidade22,Ang22,Boost22,Nboost22,From2},Objects);
+                        collision->
+                            NewVel2 = -2,
+                            NewVel1 = -2
+                   end;
+                true ->
+                    ok
             end,
             
-            case atingiuObjeto(NewX1,NewY1) of 
+            case atingiuObjeto(Objects,NewX1,NewY1) of 
                 [{Cor,X,Y}] ->
                     From1 ! {line,"game:tiraObjeto" ++ " "++float_to_list(Cor) ++ " "++ float_to_list(X) ++ " " ++ float_to_list(Y)++"\n"},
                     From2 ! {line,"game:tiraObjeto" ++ " "++float_to_list(Cor) ++ " "++ float_to_list(X) ++ " " ++ float_to_list(Y)++"\n"},
                     if 
-                        Nboost >= 5 ->
-                            ok;
+                        Nboost1 >= 5 ->
+                            NewNboost1= 5,
+                            NewBoost1 = Boost1;
                         true ->
                             case Cor of
                                 1->
-                                    NewBoost = 0,
-                                    Nboost = 0;
+                                    NewBoost1 = 0,
+                                    NewNboost1 = 0;
                                 2->
-                                    NewNboost = Nboost + 1,
-                                    NewBoost = Boost + 0.5,
-                                    timer:send_after(8000  ,self(), {retiraBoost,From, Boost});
+                                    NewNboost1 = Nboost1 + 1,
+                                    NewBoost1 = Boost1 + 0.5,
+                                    timer:send_after(8000  ,self(), {retiraBoost,From1, Boost1});
                                     
                                 3->
-                                    NewNboost = Nboost + 1,
-                                    NewBoost = Boost + 1,
-                                    timer:send_after(5000  ,self(), {retiraBoost,From, Boost}); 
-                    end 
+                                    NewNboost1 = Nboost1 + 1,
+                                    NewBoost1 = Boost1 + 1,
+                                    timer:send_after(5000  ,self(), {retiraBoost,From1, Boost1})
+                            end
+                    end; 
+                _ ->
+                    NewNboost1= Nboost1,
+                    NewBoost1 = Boost1
+            end ,
+
+            case atingiuObjeto(Objects,NewX2,NewY2) of 
+                [{Cor2,X2,Y2}] ->
+                    From1 ! {line,"game:tiraObjeto" ++ " "++float_to_list(Cor2) ++ " "++ float_to_list(X2) ++ " " ++ float_to_list(Y2)++"\n"},
+                    From2 ! {line,"game:tiraObjeto" ++ " "++float_to_list(Cor2) ++ " "++ float_to_list(X2) ++ " " ++ float_to_list(Y2)++"\n"},
+                    if                             
+
+                        Nboost2 >= 5 ->
+                            NewNboost2 = 5,
+                            NewBoost2 = Boost2;
+                            ok;
+                        true ->
+                            case Cor2 of
+                                1->
+                                    NewBoost2 = 0,
+                                    NewNboost2 = 0;
+                                2->
+                                    NewNboost2 = Nboost2 + 1,
+                                    NewBoost2 = Boost2 + 0.5,
+                                    timer:send_after(8000  ,self(), {retiraBoost,From2, Boost2});
+                                    
+                                3->
+                                    NewNboost2 = Nboost2 + 1,
+                                    NewBoost2 = Boost2 + 1,
+                                    timer:send_after(5000  ,self(), {retiraBoost,From2, Boost2})
+                            end
+                    end;
+                _ ->
+                    
+                    NewNboost2= Nboost2,
+                    NewBoost2 = Boost2
             end ,
                     
             if 
@@ -377,10 +463,12 @@ engine(GameRoom,Users1,Users2,Objects)->
                 (NewX1 > 1000 orelse 0 > NewX1 orelse NewY1 > 1000 orelse  0 >NewY1)->
                     GameRoom ! {playerOut,From1,From2};
                 true -> 
-                From1 ! {line,"game:position" ++ " "++float_to_list(NewX1) ++ " "++ float_to_list(NewY1) ++ " " ++ float_to_list(NewAng1) ++ " "++ float_to_list(NewX2) ++ " " ++ float_to_list(NewY2)++ " " ++ float_to_list(NewAng2) ++"\n"},
-                From2 ! {line,"game:position" ++ " "++float_to_list(NewX2) ++ " "++ float_to_list(NewY2) ++ " " ++ float_to_list(NewAng2) ++ " "++ float_to_list(NewX1) ++ " " ++ float_to_list(NewY1)++ " " ++ float_to_list(NewAng1) ++"\n"},
-                engine(GameRoom,{User1,NewX1,W1,E1,Q1,NewY1,NewAcc1,NewVel1, NewAng1,Boost1,Nboost1,From1},{User2,NewX2,W2,E2,Q2,NewY2,NewAcc2,NewVel2, NewAng2,Boost2,Nboost2,From2},Objects);
-            end;
+                    ok
+            end,
+            io:format("test\n"),
+            From1 ! {line,"game:position" ++ " "++float_to_list(NewX1) ++ " "++ float_to_list(NewY1) ++ " " ++ float_to_list(NewAng1) ++ " "++ float_to_list(NewX2) ++ " " ++ float_to_list(NewY2)++ " " ++ float_to_list(NewAng2) ++"\n"},
+            From2 ! {line,"game:position" ++ " "++float_to_list(NewX2) ++ " "++ float_to_list(NewY2) ++ " " ++ float_to_list(NewAng2) ++ " "++ float_to_list(NewX1) ++ " " ++ float_to_list(NewY1)++ " " ++ float_to_list(NewAng1) ++"\n"},
+            engine(GameRoom,{User1,NewX1,W1,E1,Q1,NewY1,NewAcc1,NewVel1, NewAng1,NewBoost1,NewNboost1,From1},{User2,NewX2,W2,E2,Q2,NewY2,NewAcc2,NewVel2, NewAng2,NewBoost2,NewNboost2,From2},Objects);
         gameOver ->
             ok
         
@@ -433,7 +521,13 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
                     
             end,
             gameRoom(Users1,Users2,Tref,RM,Engine);
-
+        {ponto,Pid} ->
+            if 
+                Pid == From1->           
+                    gameRoom({User1,From1,Pontos1+1,Nivel1},Users2,Tref,RM,Engine);
+                Pid == From2 ->
+                    gameRoom(Users1,{User2,From2,Pontos2+1,Nivel2},Tref,RM,Engine)                            
+            end;
         {keyr,Data,Pid} ->
                 %io:format("Pattern recognized ~p~n",[Pid]),
                 

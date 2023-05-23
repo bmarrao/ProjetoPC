@@ -44,12 +44,16 @@ float cNum = 0;
 boolean gameOver = false;
 ConnectionManager cm;
 Socket s;
-int estado = 1;
+int estado = 0;
 // Variable to store text currently being typed
 String input = "";
 
 // Variable to store saved text when return is hit
-String login = "";
+String user = "";
+String pass = "";
+boolean ready = false;
+boolean name = true;
+boolean senha = false;
 
 void starto(){
   
@@ -101,6 +105,7 @@ void setup() {
   starto();
   size(1000, 1000);
   noStroke();
+  menu();
 
   keys0 = false;
   keys1 = false;
@@ -234,7 +239,7 @@ void drawObjects(){
   for (Triplet t : objetos)
   {
     fill(t.getFirst());
-    square(t.getSecond(), t.getThird(), 30);
+    ellipse(t.getSecond(), t.getThird(), 75, 75);
   }
 }
 
@@ -269,37 +274,83 @@ void drawMine(){
 
 void draw() {
   switch(estado){
-    case 1 :
-      menu();
+    case 1:
+      login();
       break;
     case 2:
-      esperaJogo();
+      criarConta();
       break;
     case 3:
+      esperaJogo();
+      break;
+    case 4:
       jogo();
-      break;	
+      break;
+    default :
+      menu();
+    break;		
   }
 }
 
 void menu(){
-  boolean ready = 0;
   int indent = 25;
   background(255,255,0);
   textSize(56);
   fill(50);
-  text("Input: " + input,indent,190);
-  text("Saved text: " + login,indent,230);
-  text("Press spacebar to begin the game",100,500);
+  text("Login - L ",indent,190);
+  text("Criar conta - C",indent,230);
+  /*
   if(ready){
-    estado=2;
+    estado=3;
+  }
+  */
+}
+
+void login(){
+  background(255,255,0);
+  if (name)
+  {
+    text("Username: " + input,25,190);
+    text("Password: " ,25,230);
+  }
+  else
+  {
+    text("Username: " + user,25,190);
+    text("Password: " + input,25,230);
+  }
+  if(senha && user)
+  {
+    cm.send("users", "login " + user " " + pass + "\n");
+            
+    String res = cm.receive("Users");
+    String[] dividido = res.split (":");
+    if(dividido[1].equals("Sucessful"))
+    {
+      estado = 3;
+    }
+  }
+}
+
+void criarConta()
+{
+  background(255,255,0);
+  if (name)
+  {
+    text("Username: " + input,25,190);
+    text("Password: " ,25,230);
+  }
+  else
+  {
+    text("Username: " + user,25,190);
+    text("Password: " + input,25,230);
   }
 }
 
 void esperaJogo(){
   background(255,255,0);
-  text("Press spacebar to begin the game",100,500);
+  text("Wait to begin game",100,500);
   if(key == ' '){
-    estado=3;
+    estado=4;
   }
 }
 
@@ -314,22 +365,43 @@ void jogo() {
 
 //user
 void keyPressed() {
-  if(key == 'W' || key == 'w'){
+  if(key == 'W' || key == 'w' && (estado == 4 ))
+  {
     keys0 = true;
     cm.send("keyPressed","w");
   }
-  else if(key == 'E' || key == 'e'){
+  else if(key == 'E' || key == 'e' && (estado == 4 )){
     keys2 = true;
     cm.send("keyPressed","e");
   }
-  else if(key == 'Q' || key == 'q'){
+  else if(key == 'Q' || key == 'q' && (estado == 4 )){
     cm.send("keyPressed","q");
     keys1 = true;
   }
-  else if (key == '\n' ){
-    login = input;
+  else if(key == 'C' || key == 'c' && (estado == 0 )){
+    estado = 2;
+  }
+  else if((key == 'L' || key == 'l') && (estado == 0 )){
+    estado = 1;
+  }
+  else if(key == '\n' && (estado == 1  || estado == 2 ) )
+  {
+    if (name)
+    {
+      user = input;
+      name = false;
+      input = "";
+
+    }
+    else
+    {
+      pass = input ;
+      name = true;
+      senha = true;
+      input = "";
+      
+    }
     // A String can be cleared by setting it equal to ""
-    input = "";
   }
   else {
     input = input + key;
