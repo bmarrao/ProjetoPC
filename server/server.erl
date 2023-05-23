@@ -3,7 +3,7 @@
 
 %Precisamos adicionar mensagens q o servidor recebe do cliente com a localização para sabermos se "matou" o inimigo, se ganhou 
 %Algum bonus , etc ..
-acharOnline(Map,Nivel)-> [User ||{User,{_,Nivel,_,true,_}} <- maps:to_list(Map)].
+acharOnline(Map,Nivel)-> [User ||{User,{_,Comp,_,true,_}} <- maps:to_list(Map), (Nivel == Comp)].
 
 findGame(Map, User,Nivel,RM)->
     io:format("Achar jogo\n"),
@@ -101,20 +101,63 @@ user(Sock ,RM,Room) ->
                     Room ! {line,Data}
                 end, 
             user(Sock,RM,Room);
+        {nome,User} ->
+            user(Sock,RM,Room,User);
         {newGame,Game} ->
             Game ! {enter,self()},
             user(Sock,RM,Game);
         {tcp_closed, _} ->
             %Colocar pra ir offline
-            io:format("User saiu\n");
+            RM ! {logout,self()},
+            io:format("User saiuuser 3\n");
         {tcp_error, _, _} ->
             %Colocar pra ir offline
-            io:format("User saiu\n");
+            RM ! {mensagem,"logout ",self()},
+            io:format("User saiu user 3\n");
+
          _ ->
             io:format("Erro\n")
 
 end.
+user(Sock ,RM,Room,User) ->
+    receive
+        {line, Data} ->
+            %io:format("Sending data ~s~n\n", [Data]),
+            gen_tcp:send(Sock, Data),
+            user(Sock, RM,Room,User);
+        {tcp, _, Data} ->
+            case Data of
+                "users:" ++ Rest ->
+                    io:format("Received user \n"),
+                    RM ! {mensagem, Rest,self()};
+                "keyPressed:" ++ Rest->
+                    %io:format("Received keypress \n"),
+                    Room ! {keyp,Rest,self()};
+                "keyReleased:" ++ Rest->
+                    %io:format("Received keypress \n"),
+                    Room ! {keyr,Rest,self()};
+                _ ->
+                    io:format("Received ~s~n", [Data]),
+                    Room ! {line,Data}
+                end, 
+            user(Sock,RM,Room,User);
+        {newGame,Game} ->
+            Game ! {enter,self()},
+            user(Sock,RM,Game,User);
+        {tcp_closed, _} ->
+            %Colocar pra ir offline
+            RM ! {mensagem, "logout " ++ User,self()},
+            io:format("User saiu user 4\n");
+        {tcp_error, _, _} ->
+            %Colocar pra ir offline
+            RM ! {mensagem,"logout " ++ User ,self()},
+            io:format("User saiu user 4\n");
+        {nome, _} ->
+            ok;
+         _ ->
+            io:format("Erro\n")
 
+end.
 generateObject()->
     {rand:uniform(3),rand:uniform(),rand:uniform()}.
  
@@ -132,6 +175,29 @@ objectTimer(Engine)->
         objectTimer(Engine)
     end.
 
+maiorNoventa(Ang)->
+    Pi = math:pi(),
+    if 
+        Ang > 2*Pi ->
+            NewAng = Ang - 2*math:pi();
+        0>Ang ->
+            NewAng = Ang + 2*math:pi();
+        true ->
+            NewAng = Ang
+    end,
+    NewAng.
+checkColision(NewX1,NewY1,NewAng1,NewX2,NewY2,NewAng2)->
+    Normal11 = maiorNoventa(NewAng1 + math:pi()/2),
+    Normal12 = maiorNoventa(NewAng1 - math:pi()/2),
+    Normal21 = maiorNoventa(NewAng2 + math:pi()/2),
+    Normal22 = maiorNoventa(NewAng2 - math:pi()/2),
+
+
+.
+atingiuObjeto (Objetos,X,Y)->
+    [{Cor,XObj,YObj}||{Cor,XObj,YObj} <- Objetos, ].
+
+    
 engine(GameRoom,Users1,Users2,Objects)->
     {User1,Posx1,W1,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1,From1} = Users1,
     {User2,Posx2,W2,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2} = Users2,
@@ -142,7 +208,7 @@ engine(GameRoom,Users1,Users2,Objects)->
             io:format("teste keyp u1\n"),
             if 
                 Pid == From1->
-                    
+                    io:format("teste keyp u1\n"),
                     case Key of
                         "w\n" ->
                             engine(GameRoom,{User1,Posx1,true,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1,From1},Users2,Objects);
@@ -155,7 +221,7 @@ engine(GameRoom,Users1,Users2,Objects)->
                     
                 
                 Pid == From2 ->
-                       
+                    io:format("teste keyp u2\n"),
                     case Key of
                         "w\n" ->
                             engine(GameRoom,Users1,{User2,Posx2,true,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2},Objects);
@@ -180,7 +246,7 @@ engine(GameRoom,Users1,Users2,Objects)->
                             engine(GameRoom,{User1,Posx1,W1,E1,false,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1,From1},Users2,Objects)
                     end;   
                 Pid == From2 ->
-                    io:format("teste keyp u2\n"),
+                    io:format("teste keyr u2\n"),
                     case Key of
                         "w\n" ->
                             engine(GameRoom,Users1,{User2,Posx2,false,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2},Objects);
@@ -190,10 +256,18 @@ engine(GameRoom,Users1,Users2,Objects)->
                             engine(GameRoom,Users1,{User2,Posx2,W2,E2,false,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2},Objects)
                         end
                     end;
-         
+        {retiraBoost,From, Boost}->
+            if 
+                From == From1->
+                    engine(GameRoom,{User1,Posx1,true,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1-Boost,Nboost1-1,From1},Users2,Objects);
+                Pid == From2 ->
+                    engine(GameRoom,Users1,{User2,Posx2,false,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2-Boost,Nboost2-1,From2},Objects)
+            end;
         {object,Objeto}->
-            GameRoom ! {newObject, Objeto},
             NewObjects = Objects ++ [Objeto],
+            {Cor,X,Y} = Objeto ,
+            From1 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ float_to_list(X) ++ " " ++ float_to_list(Y) ++ "\n"},
+            From2 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ float_to_list(X) ++ " " ++ float_to_list(Y) ++ "\n"},
             engine(GameRoom,Users1,Users2,NewObjects);
         timeout ->
            
@@ -209,13 +283,14 @@ engine(GameRoom,Users1,Users2,Objects)->
                             NewAcc1 = Aceleracao1 - 0.09
                 end
                   
-                
+            
             end,
             case {E1,Q1} of
                 {true,false} ->
                     NewAng1 = Ang1 + math:pi()/128;
+                
                 {false,true} ->
-                    NewAng1 = Ang1 +  math:pi()/128;
+                    NewAng1 = Ang1 -  math:pi()/128;
                 _ ->
                     NewAng1 = Ang1
             end,
@@ -227,7 +302,7 @@ engine(GameRoom,Users1,Users2,Objects)->
                     if 
                         0.09>=Aceleracao2->
 
-                            NewAcc2 = 0;
+                            NewAcc2 = -0.5;
                         Aceleracao2>0.09 ->
                             NewAcc2 = Aceleracao2 - 0.09
                 end
@@ -237,28 +312,75 @@ engine(GameRoom,Users1,Users2,Objects)->
                 {true,false} ->
                     NewAng2 = Ang2 + math:pi()/128;
                 {false,true} ->
-                    NewAng2 = Ang2 +  math:pi()/128;
+                    NewAng2 = Ang2 -  math:pi()/128;
                 _ ->
                     NewAng2 = Ang2
             end,
-                
-            NewVel1 = Velocidade1 + NewAcc1*0.066,
-            NewVel2 = Velocidade2 + NewAcc2*0.066,
+            if 
+                0>=Velocidade1->
+                    NewVel1 = 0;
+                true ->
+
+                    NewVel1 = Velocidade1 + NewAcc1*0.066 - 0.066
+            end,
+            if 
+                0>=Velocidade2->
+                    NewVel2 = 0;
+                true ->
+
+                    NewVel2 = Velocidade1 + NewAcc1*0.066 - 0.066
+            end,
+            
 
             NewX1 = Posx1 + math:cos(NewAng1)*NewVel1,
             NewY1 = Posy1 + math:sin(NewAng1)*NewVel1,
             NewX2 = Posx2 + math:cos(NewAng2)*NewVel2,
             NewY2 = Posy2 + math:sin(NewAng2)*NewVel2,
-
-
-            %{NewBoost,Objeto1} = conflitObjeto(Objects,NewX1,NewY1,Boost,Nboost),
-            %{NewBoost1,Objeto2} = conflitObjeto(Objects,NewX2,NewY2,Boost,Nboost1),
-            %NewObjects = lists:delete(Objeto1,Objects),
-            %NewOBjects1 = lists:delete(Objeto2,NewObjects),
-             
-            GameRoom ! {newPositions, {User1,NewX1,NewY1,NewAng1},{User2,NewX2,NewY2,NewAng2}},
-            engine(GameRoom,{User1,NewX1,W1,E1,Q1,NewY1,NewAcc1,NewVel1, NewAng1,Boost1,Nboost1,From1},{User2,NewX2,W2,E2,Q2,NewY2,NewAcc2,NewVel2, NewAng2,Boost2,Nboost2,From2},Objects);
-
+            DistAux = math:pow((NewX1 -NewX2),2) + math:pow((NewY1 -NewY2),2),
+            Dist = math:sqrt(DistAux),
+            if 
+                50>Dist->
+                    case checkColision(NewX1,NewY1,NewAng1,NewX2,NewY2,NewAng2) of
+                        pontoP1->
+                            ;
+                        pontoP2->
+                    end
+            end,
+            
+            case atingiuObjeto(NewX1,NewY1) of 
+                [{Cor,X,Y}] ->
+                    From1 ! {line,"game:tiraObjeto" ++ " "++float_to_list(Cor) ++ " "++ float_to_list(X) ++ " " ++ float_to_list(Y)++"\n"},
+                    From2 ! {line,"game:tiraObjeto" ++ " "++float_to_list(Cor) ++ " "++ float_to_list(X) ++ " " ++ float_to_list(Y)++"\n"},
+                    if 
+                        Nboost >= 5 ->
+                            ok;
+                        true ->
+                            case Cor of
+                                1->
+                                    NewBoost = 0,
+                                    Nboost = 0;
+                                2->
+                                    NewNboost = Nboost + 1,
+                                    NewBoost = Boost + 0.5,
+                                    timer:send_after(8000  ,self(), {retiraBoost,From, Boost});
+                                    
+                                3->
+                                    NewNboost = Nboost + 1,
+                                    NewBoost = Boost + 1,
+                                    timer:send_after(5000  ,self(), {retiraBoost,From, Boost}); 
+                    end 
+            end ,
+                    
+            if 
+                (NewX2 > 1000 orelse 0 > NewX2 orelse NewY2 > 1000 orelse  0 >NewY2)->
+                    GameRoom ! {playerOut,From2,From1};
+                (NewX1 > 1000 orelse 0 > NewX1 orelse NewY1 > 1000 orelse  0 >NewY1)->
+                    GameRoom ! {playerOut,From1,From2};
+                true -> 
+                From1 ! {line,"game:position" ++ " "++float_to_list(NewX1) ++ " "++ float_to_list(NewY1) ++ " " ++ float_to_list(NewAng1) ++ " "++ float_to_list(NewX2) ++ " " ++ float_to_list(NewY2)++ " " ++ float_to_list(NewAng2) ++"\n"},
+                From2 ! {line,"game:position" ++ " "++float_to_list(NewX2) ++ " "++ float_to_list(NewY2) ++ " " ++ float_to_list(NewAng2) ++ " "++ float_to_list(NewX1) ++ " " ++ float_to_list(NewY1)++ " " ++ float_to_list(NewAng1) ++"\n"},
+                engine(GameRoom,{User1,NewX1,W1,E1,Q1,NewY1,NewAcc1,NewVel1, NewAng1,Boost1,Nboost1,From1},{User2,NewX2,W2,E2,Q2,NewY2,NewAcc2,NewVel2, NewAng2,Boost2,Nboost2,From2},Objects);
+            end;
         gameOver ->
             ok
         
@@ -274,8 +396,8 @@ gameRoom(User1,User2,RM) ->
         {start,Tref}->
             Object =generateObject(),
             GameRoom ! {newObject,Object},
-            {Posx1,W1,Q1,E1, Posy1, Aceleracao1, Velocidade1,Ang1,Boost1,Nboost1} = {0.0,false,false,false,0.0,0.0,0.0,0.0,0.0,0.0},
-            {Posx2,W2,Q2,E2, Posy2, Aceleracao2, Velocidade2,Ang2,Boost2,Nboost2} = {0.0,false,false,false,0.0,0.0,0.0,0.0,0.0,0.0},
+            {Posx1,W1,Q1,E1, Posy1, Aceleracao1, Velocidade1,Ang1,Boost1,Nboost1} = {250,false,false,false,250,0.0,0.0,0.0,0.0,0.0},
+            {Posx2,W2,Q2,E2, Posy2, Aceleracao2, Velocidade2,Ang2,Boost2,Nboost2} = {750,false,false,false,750,0.0,0.0,math:pi(),0.0,0.0},
             Engine = spawn(fun()->engine(GameRoom,{ Users1,Posx1,W1,Q1,E1, Posy1, Aceleracao1, Velocidade1,Ang1,Boost1,Nboost1,From1}, { Users2,Posx2,W2,Q2,E2, Posy2, Aceleracao2, Velocidade2,Ang2,Boost2,Nboost2,From2},[Object]) end),
             spawn(fun() -> gameTimer(Engine) end),
             spawn(fun() -> objectTimer(Engine) end),
@@ -312,7 +434,7 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
             end,
             gameRoom(Users1,Users2,Tref,RM,Engine);
 
-            {keyr,Data,Pid} ->
+        {keyr,Data,Pid} ->
                 %io:format("Pattern recognized ~p~n",[Pid]),
                 
                 %io:format("user ~p~n",[User1]),
@@ -336,24 +458,14 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
         {enter, _} ->
             io:format("gameRoom start ~n", []),
             gameRoom(Users1,Users2,Tref,RM,Engine);
-        {playerOut,User1,User2}->
+        {playerOut,From1,From2}->
             RM ! {matchWinner,User1,From1,Nivel1},
             RM ! {matchLoser,User2,From2,Nivel2},
             erlang:cancel(Tref);
-        {playerOut,User2,User1}->
+        {playerOut,From2,From1}->
             RM ! {matchWinner,User2,From1,Nivel1},
             RM ! {matchLoser,User1,From2,Nivel2},
             erlang:cancel(Tref);
-        {newPositions, {_,NewX1,NewY1,NewAng1},{_,NewX2,NewY2,NewAng2}}->
-            %io:format("newPOSITIONS\n"),    
-            From1 ! {line,"position:"++ float_to_list(NewX1) ++ " "++ float_to_list(NewY1) ++ " " ++ float_to_list(NewAng1) ++ " " ++ float_to_list(NewX2) ++ " " ++ float_to_list(NewY2)++ " " ++ float_to_list(NewAng2) ++  "\n"},
-            From2 ! {line,"position:"++ float_to_list(NewX2) ++ " "++ float_to_list(NewY2) ++ " "  ++ float_to_list(NewAng2) ++ " "++ float_to_list(NewX1) ++ " " ++ float_to_list(NewY1)++ " " ++ float_to_list(NewAng1) ++"\n"},
-            gameRoom(Users1,Users2,Tref,RM,Engine);
-        {newObject, {Cor,X,Y}}->
-            From1 ! {line , "object:" ++ integer_to_list(Cor) ++ " " ++ float_to_list(X) ++ " " ++ float_to_list(Y) ++ "\n"},
-            From2 ! {line , "object:" ++ integer_to_list(Cor) ++ " " ++ float_to_list(X) ++ " " ++ float_to_list(Y) ++ "\n"},
-            gameRoom(Users1,Users2,Tref,RM,Engine);
-
         gameOver ->
             io:format("Acabou o jogo ~n", []),
             if 
@@ -410,7 +522,6 @@ rm(Rooms,Users) ->
                     NewNivel = Nivel
             end,
             NewUsers = maps:update(User, {Pass,NewNivel,Vitorias+1,true,From}, Users),
-            NewRooms =Rooms ,
             findGame(Users,User,Nivel,self()),
             NewUsers = Users,
             NewRooms = Rooms ,
@@ -419,8 +530,7 @@ rm(Rooms,Users) ->
             findGame(Users,User,Nivel,self()),
             NewUsers = Users,
             NewRooms = Rooms ,
-            From ! {line, "gameOver:lost"};
-        
+            From ! {line, "gameOver:lost"};    
         {newMatch,User1,User2}->
             io:format("Encontrei Partida\n"),
             {Pass,Nivel1,Vitorias,true,From} = maps:get(User1,Users),
@@ -481,6 +591,7 @@ create_account(User,Pass,Map,From) ->
         error ->
             %io:format("Dou print account \n"),
             From ! {line,"Users:sucessful\n"},    
+            From ! {nome, User},
             {ok,Map#{User=> {Pass,1,0,false,From}}};
         _ ->
             From ! {line,"Users:unsucessful\n"},    
@@ -503,6 +614,7 @@ login(User,Pass,Map,From) ->
     case maps:find(User,Map) of
         {ok,{NewPass,Nivel,Vitorias,false,_}} -> 
             From ! {line,"Users:sucessful\n"},
+            From ! {nome, User},
             {ok,maps:update(User, {NewPass,Nivel,Vitorias,true,From}, Map),Nivel};       
         _ ->
             From ! {line,"Users:unsucessful\n"},
@@ -515,7 +627,7 @@ logout(User,Map,From) ->
     case maps:find(User,Map) of
         {ok,{Pass,Nivel,Vitorias,true,From}} ->
             From ! {line,"Users:sucessful\n"},
-            {ok,maps:update(User,{Pass,Nivel,Vitorias,false,From},Map)};
+            {ok,maps:update(User,{Pass,Nivel,Vitorias,false,0},Map)};
         _ ->
             From ! {line,"Users:uncessful\n"},
             {ok,Map}

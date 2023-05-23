@@ -4,52 +4,23 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.io.*;
 import java.net.*;
-import java.util.Iterator;
 
-public class Triplet
-{
-    private final Float first;
-    private final Float second;
-    private final Float third;
 
-    public Triplet(Float first, Float second, Float third) 
-    {
-        this.first = first;
-        this.second = second;
-        this.third = third;
-    }
-
-    public boolean Equals(Float first, Float second, Float third)
-    {
-      return this.first == first && this.second == second && this.third == third;
-    }
-
-    public Float getFirst() { return first; }
-    public Float getSecond() { return second; }
-    public Float getThird() { return third; }
-}
-
-float posx ;
-float posy ;
-float posxE ;
-float posyE ;
-float angE ;
-float ang ;
-float vel ;
+float posx = 0;
+float posy = 0;
+float posxE = 0;
+float posyE = 0;
+float angE = 0;
+float ang = 0;
+float vel = 0;
 boolean keys1;
 boolean keys2;
 boolean keys0;
-ArrayList < Triplet > objetos = new ArrayList < Triplet > ();
+ArrayList < Float > objetos = new ArrayList < Float > ();
 float cNum = 0;
 boolean gameOver = false;
 ConnectionManager cm;
 Socket s;
-int estado = 1;
-// Variable to store text currently being typed
-String input = "";
-
-// Variable to store saved text when return is hit
-String login = "";
 
 void starto(){
   
@@ -105,78 +76,48 @@ void setup() {
   keys0 = false;
   keys1 = false;
   keys2 = false;
-
+    
+    new Thread(() -> {
+          
+          try{
+            Thread.sleep(4000);
+            while(!gameOver){ notifyAll();
+            Thread.sleep(10);
+            }
+          }catch(Exception e){
+            
+          }
+        }).start();
+    
     new Thread(() -> {
           try{
             String res ;
             while(!gameOver)
             {
-              res = cm.receive("game");
-              
-             
-              
-              if(!(res == null))
-              {
-                //System.out.println("recebi posicao");
-                //System.out.println(res+"pos");
-                String[] sep = res.split(" ");
-                if (sep[0].equals("position")){
-                  posx =Float.parseFloat(sep[1]);
-                  posy =Float.parseFloat(sep[2]);
-                  ang = Float.parseFloat(sep[3]);
-                  posxE =Float.parseFloat(sep[4]);
-                  posyE = Float.parseFloat(sep[5]);
-                  angE = Float.parseFloat(sep[6]);
-                }
-                else if (sep[0].equals("gameOver"))
-                {
-                  
-                }
-                else if (sep[0].equals("tiraObjeto"))
-                {
-                  Float cor = Float.parseFloat(sep[1]);
-                  Float x = Float.parseFloat(sep[2]);
-                  Float y = Float.parseFloat(sep[3]);
-                  Iterator <Triplet> itr = objetos.iterator();
-                  while (itr.hasNext())
-                  {
-                    Triplet test = itr.next();
-                    if (test.Equals(cor,x,y))
-                    {
-                      itr.remove();
-                    }
-                  }
-                }
-                else 
-                {
-                  String cor = sep[1];
-                  String x = sep[2];
-                  String y = sep[3];
-                  Triplet triplet = new Triplet(Float.parseFloat(cor),Float.parseFloat(x),Float.parseFloat(y));
-                  objetos.add(triplet);
-                
-                }
-              }
+              res = cm.receive("position");
+              System.out.println("recebi posicao");
+              System.out.println(res+"pos");
+              String[] sep = res.split(" ");
+              posx =Float.parseFloat(sep[0]);
+              posy =Float.parseFloat(sep[1]);
+              ang = Float.parseFloat(sep[2]);
+              posxE =Float.parseFloat(sep[3]);
+              posyE = Float.parseFloat(sep[4]);
+              angE = Float.parseFloat(sep[5]);
             }
-          }
-          catch(Exception e){
+          }catch(Exception e){
             System.out.println("Thread crashou POs");
           }
         }).start();
-    /*
+      
     new Thread(() -> {
       try{
             String res ;
             while(!gameOver)
             {
-              
-              res = cm.receive("object",9000);
-              
-              
-              if (!(res == null))
-              {
-              //System.out.println("recebi objecto");
-              //System.out.println(res+"object");
+              res = cm.receive("object");
+              System.out.println("recebi objecto");
+              System.out.println(res + "obj");
               String[] vals = res.split(" ");
               String cor = vals[0];
               String x = vals[1];
@@ -184,14 +125,13 @@ void setup() {
               objetos.add(Float.parseFloat(cor)); 
               objetos.add(Float.parseFloat(x));
               objetos.add(Float.parseFloat(y)); 
-              }
+              
             }
       }catch(Exception e){
         System.out.println("Thread crashou Object");
       }
         }).start();
-    */
-    /*
+
     new Thread(() -> 
     {
       try
@@ -217,7 +157,6 @@ void setup() {
         System.out.println("Thread crashou");
       }
         }).start();
-        */
 }
 
 
@@ -231,11 +170,6 @@ void drawObjects(){
     quad(objetos[2*i]-25,objetos[2*i + 1]-25 ,objetos[2*i]+25,objetos[2*i + 1]-25,objetos[2*i]+25,objetos[2*i + 1]+25  ,objetos[2*i]-25,objetos[2*i + 1]+25);
   }
   */
-  for (Triplet t : objetos)
-  {
-    fill(t.getFirst());
-    square(t.getSecond(), t.getThird(), 30);
-  }
 }
 
 
@@ -247,7 +181,7 @@ void drawEnemy(){
   
   fill(150);
   triangle(40, 0, 0,  25, 0, -25);
-  fill(255,0,0);
+  fill(255,255,255);
   ellipse(0, 0, 50, 50);
   popMatrix();
 }
@@ -261,54 +195,16 @@ void drawMine(){
 
   fill(150);
   triangle(40, 0, 0,  25, 0, -25);
-  fill(0,0,255);
+  fill(255,255,255);
   ellipse(0, 0, 50, 50);
   popMatrix();
 }
 
 
 void draw() {
-  switch(estado){
-    case 1 :
-      menu();
-      break;
-    case 2:
-      esperaJogo();
-      break;
-    case 3:
-      jogo();
-      break;	
-  }
-}
-
-void menu(){
-  boolean ready = 0;
-  int indent = 25;
-  background(255,255,0);
-  textSize(56);
-  fill(50);
-  text("Input: " + input,indent,190);
-  text("Saved text: " + login,indent,230);
-  text("Press spacebar to begin the game",100,500);
-  if(ready){
-    estado=2;
-  }
-}
-
-void esperaJogo(){
-  background(255,255,0);
-  text("Press spacebar to begin the game",100,500);
-  if(key == ' '){
-    estado=3;
-  }
-}
-
-void jogo() {
   background(204);
   drawEnemy();
   drawMine();
-  if(objetos.size() != 0)
-    drawObjects();
 }
 
 
@@ -325,14 +221,6 @@ void keyPressed() {
   else if(key == 'Q' || key == 'q'){
     cm.send("keyPressed","q");
     keys1 = true;
-  }
-  else if (key == '\n' ){
-    login = input;
-    // A String can be cleared by setting it equal to ""
-    input = "";
-  }
-  else {
-    input = input + key;
   }
 
 }
@@ -353,7 +241,7 @@ void keyReleased() {
   else if(key == 'Q' || key == 'q'){
     
     keys1 = false;
-    cm.send("keyReleased","q");
+    cm.send("keyReleased","w");
     
   }
 }
@@ -402,9 +290,12 @@ public class ConnectionManager
           String[] array = res.split(":");
           typeMessage.put(array[0],array[1]);
           message = typeMessage.get(type);
-          while(message.equals(null)){ 
+          while(message.equals(null))
+          {
             
-            
+            notifyAll();
+            wait();
+            System.out.println("Fui Acordado");
             message = typeMessage.get(type);
           }
             notifyAll();
