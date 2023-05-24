@@ -31,7 +31,7 @@ void starto(){
       s = new Socket(host, port);
       cm = new ConnectionManager(s);
             
-      cm.send("users", "create_account anotherone admin");
+      cm.send("users", "create_account talsi admin");
             
       new Thread(() -> {
           try {
@@ -44,7 +44,7 @@ void starto(){
           }
       }).start();
             
-      cm.send("users", "login anotherone admin");
+      cm.send("users", "login talsi admin");
             
       new Thread(() -> {
           try {
@@ -92,6 +92,7 @@ void setup() {
                 //System.out.println(res+"pos");
                 String[] sep = res.split(" ");
                 if (sep[0].equals("position")){
+                  System.out.println(res+"pos");
                   posx =Float.parseFloat(sep[1]);
                   posy =Float.parseFloat(sep[2]);
                   ang = Float.parseFloat(sep[3]);
