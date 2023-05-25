@@ -238,6 +238,7 @@ void gameThread()
             while(!gameOver)
             {
               res = cm.receive("game");
+              System.out.println(res);
               estado = 4;
               if(!(res == null))
               {
@@ -254,14 +255,11 @@ void gameThread()
                 }
                 else if (sep[0].equals("gameOver"))
                 {
-                  estado = 3;
-                }
-                else if (sep[0].equals("Found"))
-                {
-                  estado = 4;
-                  System.out.println("Entreiiiiiiiiii");
+                  System.out.println("OIIIIII");
 
-                  
+                  text(sep[1],300,300);
+                  estado = 6;
+                  gameOver = true;
                 }
                 else if (sep[0].equals("tiraObjeto"))
                 {
@@ -338,6 +336,30 @@ void drawMine(){
   popMatrix();
 }
 
+void querJogar()
+{
+  background(255,255,0);
+  text("Press space to find game",100,500);
+
+  if (key == ' ')
+  {
+    cm.send("users", "find_game " + user + "\n");
+      new Thread(() -> {
+            try {
+                
+                String res = cm.receive("Users");
+                if(res.equals("sucessful"))
+                {
+                  estado = 3;
+                }
+            }
+            catch (Exception e) {
+                // TODO: handle exception
+            }
+        }).start();
+  }
+  
+}
 
 void draw() {
   switch(estado){
@@ -356,12 +378,50 @@ void draw() {
     case 5:
       scoreboard();
       break;
+    case 6:
+      querJogar();
+      break;
+    case 7:
+      fecharConta();
+      break;
     default :
       menu();
     break;		
   }
 }
 
+void fecharConta()
+{
+  background(255,255,0);
+  if (name)
+  {
+    text("Username: " + input,25,190);
+    text("Password: " ,25,230);
+  }
+  else
+  {
+    text("Username: " + user,25,190);
+    text("Password: " + input,25,230);
+  }
+   if(senha && name && once)
+  {
+    once = false;
+    cm.send("users", "create_account " + user + " " + pass + "\n");
+    new Thread(() -> {
+          try {
+              
+              String res = cm.receive("Users");
+              if(res.equals("sucessful"))
+              {
+                estado = 0;
+              }
+          }
+          catch (Exception e) {
+               // TODO: handle exception
+          }
+      }).start();
+  }
+}
 void menu(){
   int indent = 25;
   background(255,255,0);
@@ -370,6 +430,7 @@ void menu(){
   text("Login - L ",indent,190);
   text("Criar conta - C",indent,230);
   text("Scoreboard - S",indent,270);
+  text("Fechar conta - F",indent,310);
 }
 
 void login(){
@@ -394,7 +455,7 @@ void login(){
               String res = cm.receive("Users");
               if(res.equals("sucessful"))
               {
-                estado = 3;
+                estado = 6;
               }
           }
           catch (Exception e) {
@@ -402,7 +463,6 @@ void login(){
           }
       }).start();
   }
-  //System.out.println(estado);
 }
 
 void criarConta()
@@ -433,7 +493,7 @@ void criarConta()
           if(res.equals("sucessful\n"))
           {
             System.out.println("entrei aqui");
-            estado = 3;
+            estado = 6;
           }
         }
         catch (Exception e) {
@@ -466,29 +526,16 @@ void esperaJogo(){
   background(255,255,0);
   text("Wait to begin game",100,500);
 
+  gameOver = false;
   if (waitGame)
   {
     waitGame = false;
     gameThread();
   }
-  
-  //Talvez não funcione
-  /*
-  try{
-    String res = cm.receive("game");
-    String[] dividido = res.split (":");
-    if(dividido[1].equals("Found"))
-    {
-      estado = 4;
-    }
-  } catch (Exception e) {
-    // Nothing
-  }
-  */
+
 }
 
 void jogo() {
-  System.out.println("Nao estas ca opis nao?");
 
   background(204);
   drawEnemy();
@@ -515,7 +562,7 @@ void scoreboard(){
       int num = Integer.parseInt(arr[0]);
       for (int i = 0 ; i < num; i++)
       {
-        text("User " + arr[i*2+1] + "Vitorias: " + arr[i*2+2],100,300 * (i+1)));
+        text("User " + arr[i*2+1] + "Vitorias: " + arr[i*2+2],100,300 * (i+1));
       } 
     }
     catch (Exception e) 
@@ -556,7 +603,10 @@ void keyPressed() {
     estado = 0;
     menu();
   }
-  else if(key == '\n' && (estado == 1  || estado == 2 ) )
+  else if((key == 'F' || key == 'f') && (estado == 0 )){
+    estado = 7;
+  }
+  else if(key == '\n' && (estado == 1  || estado == 2 || estado == 7) )
   {
     if (name)
     {

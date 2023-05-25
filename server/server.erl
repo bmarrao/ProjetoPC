@@ -3,7 +3,7 @@
 
 %Precisamos adicionar mensagens q o servidor recebe do cliente com a localização para sabermos se "matou" o inimigo, se ganhou 
 %Algum bonus , etc ..
-acharOnline(Map,Nivel)-> [User ||{User,{_,Comp,_,true,_}} <- maps:to_list(Map), (Nivel == Comp)].
+acharOnline(Map,Nivel)-> [User ||{User,{_,Comp,_,true,_,true}} <- maps:to_list(Map), (Nivel == Comp)].
 
 findGame(Map, User,Nivel,RM)->
     io:format("Achar jogo\n"),
@@ -36,12 +36,12 @@ lerArquivo([],Map)-> Map;
 
 lerArquivo([H|T],Map)->
     [User,Pass,Nivel,Vitorias]= string:tokens(H,";"),
-    lerArquivo(T,Map#{User=> {Pass,list_to_integer(Nivel),list_to_integer(Vitorias),false,0}}).
+    lerArquivo(T,Map#{User=> {Pass,list_to_integer(Nivel),list_to_integer(Vitorias),false,0,false}}).
 
 escreverArquivo(Map,File)->
     {ok, S} = file:open(File, [write]),
     maps:fold(
-	fun(User, {Pass,Nivel,Vitorias,_,_}, ok) ->
+	fun(User, {Pass,Nivel,Vitorias,_,_,_}, ok) ->
 		io:format(S, "~s~n", [(User++";"++Pass++";"++integer_to_list(Nivel)++";"++integer_to_list(Vitorias))])
 	end, ok, Map).
 
@@ -165,7 +165,7 @@ user(Sock ,RM,Room,User) ->
 
 end.
 generateObject()->
-    {rand:uniform(3),rand:uniform(),rand:uniform()}.
+    {rand:uniform(3),rand:uniform(10000),rand:uniform(10000)}.
  
 gameTimer(Engine)->
     receive after 15 ->
@@ -308,9 +308,11 @@ engine(GameRoom,Users1,Users2,Objects)->
             end;
         {object,Objeto}->
             NewObjects = Objects ++ [Objeto],
-            {Cor,X,Y} = Objeto ,
-            From1 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ float_to_list(X) ++ " " ++ float_to_list(Y) ++ "\n"},
-            From2 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ float_to_list(X) ++ " " ++ float_to_list(Y) ++ "\n"},
+            {Cor,X,Y} = Objeto,
+            X1 = X/100,
+            Y1 = Y/100,
+            From1 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ float_to_list(X1) ++ " " ++ float_to_list(Y1) ++ "\n"},
+            From2 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ float_to_list(X1) ++ " " ++ float_to_list(Y1) ++ "\n"},
             engine(GameRoom,Users1,Users2,NewObjects);
         timeout ->
            
@@ -592,7 +594,7 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
                     From2 ! {changeRoom, OT},
                     Engine ! {overTime,OT};
                 true ->
-                    timer:send_after(100, gameOver),
+                    self() ! gameOver,
                     gameRoom(Users1,Users2,Tref,RM,Engine)
             end;
             
@@ -601,9 +603,14 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
             Engine ! gameOver,
             case Pontos1 > Pontos2 of
                 true ->
+                    From1 ! {line, "game:gameOver venceu\n"},
+                    From2 ! {line, "game:gameOver perdeu\n"},
+
                     RM ! {matchWinner,User1,From1,Nivel1},
                     RM ! {matchLoser,User2,From2,Nivel2};
                 false ->
+                    From2 ! {line, "game:gameOver venceu\n"},
+                    From1 ! {line, "game:gameOver perdeu\n"},
                     RM ! {matchWinner,User1,From1,Nivel1},
                     RM ! {matchLoser,User2,From2,Nivel2}
             end
@@ -679,10 +686,14 @@ overtime(Users1,Users2,RM,Engine) ->
         
         {ponto,Pid} ->
             if 
-                Pid == From1->           
+                Pid == From1->         
+                    From1 ! {line, "game:gameOver venceu\n"},
+                    From2 ! {line, "game:gameOver perdeu\n"},  
                     RM ! {matchWinner,User1},
                     RM ! {matchLoser,User2};
                 Pid == From2 ->
+                    From2 ! {line, "game:gameOver venceu\n"},
+                    From1 ! {line, "game:gameOver perdeu\n"},
                     RM ! {matchWinner,User2},
                     RM ! {matchLoser,User1}
             end,
@@ -697,7 +708,7 @@ rm(Rooms,Users) ->
             NewUsers = usersManager(Users,Data,self(),From),
             NewRooms = Rooms ;
         {matchWinner,User,Nivel,From}->
-            {Pass,Nivel,Vitorias,true,From} = maps:get(User,Users),
+            {Pass,Nivel,Vitorias,true,From,true} = maps:get(User,Users),
             if 
                 Vitorias +1 == 2 * Nivel ->
                     NewNivel = Nivel +1;
@@ -705,15 +716,11 @@ rm(Rooms,Users) ->
                     NewNivel = Nivel
             end,
             NewUsers = maps:update(User, {Pass,NewNivel,Vitorias+1,true,From}, Users),
-            findGame(Users,User,Nivel,self()),
-            NewUsers = Users,
-            NewRooms = Rooms ,
-            From ! {line, "gameOver:won"};
+            NewRooms = Rooms ;
         {matchLoser,User,Nivel,From}->
-            findGame(Users,User,Nivel,self()),
-            NewUsers = Users,
-            NewRooms = Rooms ,
-            From ! {line, "gameOver:lost"};   
+            {Pass,Nivel,Vitorias,true,From,true} = maps:get(User,Users),
+            NewUsers = maps:update(User, {Pass,Nivel,Vitorias,true,From,false}, Users),
+            NewRooms = Rooms ;
         {scoreBoard,From}->
             From ! {line,listagemVitorias(Users)} ,
             NewUsers = Users,
@@ -721,9 +728,9 @@ rm(Rooms,Users) ->
         {newMatch,User1,User2}->
 
             io:format("Encontrei Partida\n"),
-            {Pass,Nivel1,Vitorias,true,From} = maps:get(User1,Users),
+            {Pass,Nivel1,Vitorias,true,From,true} = maps:get(User1,Users),
             Aux = maps:update(User1,{Pass,Nivel1,Vitorias,false,From},Users),
-            {Pass1,Nivel2,Vitorias1,true,From1} = maps:get(User2,Users),
+            {Pass1,Nivel2,Vitorias1,true,From1,true} = maps:get(User2,Users),
             NewUsers = maps:update(User1,{Pass1,Nivel2,Vitorias1,false,From1},Aux),
             NewRooms = Rooms ,
             Room = spawn(fun()-> gameRoom({User1,From,0,Nivel1},{User2,From1,0,Nivel2},self()) end),
@@ -743,6 +750,10 @@ usersManager(Users,String,RM,From)->
     io:format("Entrei no usersManager\n"),
 
     case String of 
+        "find_game " ++ User ->
+            io:format("finding game"),
+            {_,NewUsers,Nivel} = find_game(User,Users,From),
+            findGame(Users,User,Nivel,RM);
         "create_account " ++ Rest ->
             io:format("Create Account\n"), 
             [User,Pass] = string:tokens(Rest," "),
@@ -767,7 +778,14 @@ usersManager(Users,String,RM,From)->
             {_, NewUsers} = logout (User,Users,From)
     end,
     NewUsers.
-
+find_game(User,Map,From)->
+    case maps:find(User,Map) of
+        {ok,{Pass,Nivel,Vitorias,true,Nsei,false}} ->
+            From ! {line,"Users:sucessful\n"},
+            {ok,maps:update(User,{Pass,Nivel,Vitorias,true,Nsei,true},Map),Nivel};
+        _ ->
+            From ! {line,"Users:unsucessful\n"}
+end.
 
 listagemVitorias(Users)->
     Lista = [{User,Vic} ||{User,{_,_,Vic,_,_}} <- maps:to_list(Users)],
@@ -793,7 +811,7 @@ create_account(User,Pass,Map,From) ->
             %io:format("Dou print account \n"),
             From ! {line,"Users:sucessful\n"},    
             From ! {nome, User},
-            {ok,Map#{User=> {Pass,1,0,false,From}}};
+            {ok,Map#{User=> {Pass,1,0,false,From,false}}};
         _ ->
             From ! {line,"Users:unsucessful\n"},    
             {user_exists,Map}
@@ -802,7 +820,7 @@ create_account(User,Pass,Map,From) ->
 
 close_account(User,Pass,Map,From) ->
     case maps:find(User,Map) of
-        {ok,{Pass,_,_,_,From}} ->
+        {ok,{Pass,_,_,_,From,_}} ->
             From ! {line,"Users:sucessful\n"},
             {ok,maps:remove(Map,User)};
          _ -> 
@@ -813,10 +831,10 @@ close_account(User,Pass,Map,From) ->
 login(User,Pass,Map,From) -> 
     [NewPass] = string:tokens(Pass, "\n"),
     case maps:find(User,Map) of
-        {ok,{NewPass,Nivel,Vitorias,false,_}} -> 
+        {ok,{NewPass,Nivel,Vitorias,false,_,false}} -> 
             From ! {line,"Users:sucessful\n"},
             From ! {nome, User},
-            {ok,maps:update(User, {NewPass,Nivel,Vitorias,true,From}, Map),Nivel};       
+            {ok,maps:update(User, {NewPass,Nivel,Vitorias,true,From,false}, Map),Nivel};       
         _ ->
             From ! {line,"Users:unsucessful\n"},
             {ok,Map}
@@ -826,9 +844,9 @@ login(User,Pass,Map,From) ->
 
 logout(User,Map,From) -> 
     case maps:find(User,Map) of
-        {ok,{Pass,Nivel,Vitorias,true,From}} ->
+        {ok,{Pass,Nivel,Vitorias,true,From,_}} ->
             From ! {line,"Users:sucessful\n"},
-            {ok,maps:update(User,{Pass,Nivel,Vitorias,false,0},Map)};
+            {ok,maps:update(User,{Pass,Nivel,Vitorias,false,0,false},Map)};
         _ ->
             From ! {line,"Users:uncessful\n"},
             {ok,Map}
