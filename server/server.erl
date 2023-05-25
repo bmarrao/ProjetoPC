@@ -165,7 +165,7 @@ user(Sock ,RM,Room,User) ->
 
 end.
 generateObject()->
-    {rand:uniform(3),rand:uniform(10000),rand:uniform(10000)}.
+    {rand:uniform(3),rand:uniform(1000),rand:uniform(1000)}.
  
 gameTimer(Engine)->
     receive after 15 ->
@@ -177,8 +177,9 @@ objectTimer(Engine)->
     receive after 10000 ->
         Object =generateObject(),
         Engine ! {object,Object},
-        %mandar pra engine
         objectTimer(Engine)
+
+        %mandar pra engine
     end.
 
 maiorNoventa(Ang)->
@@ -309,10 +310,8 @@ engine(GameRoom,Users1,Users2,Objects)->
         {object,Objeto}->
             NewObjects = Objects ++ [Objeto],
             {Cor,X,Y} = Objeto,
-            X1 = X/100,
-            Y1 = Y/100,
-            From1 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ float_to_list(X1) ++ " " ++ float_to_list(Y1) ++ "\n"},
-            From2 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ float_to_list(X1) ++ " " ++ float_to_list(Y1) ++ "\n"},
+            From1 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ float_to_list(X) ++ " " ++ float_to_list(Y) ++ "\n"},
+            From2 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ float_to_list(X) ++ " " ++ float_to_list(Y) ++ "\n"},
             engine(GameRoom,Users1,Users2,NewObjects);
         timeout ->
            
@@ -404,8 +403,6 @@ engine(GameRoom,Users1,Users2,Objects)->
                             GameRoom ! {ponto,From2},
                             engine(GameRoom,{User1,Posx11,W11,Q11,E11, Posy11, Aceleracao11, Velocidade11,Ang11,Boost11,Nboost11,From1},{User2,Posx22,W22,Q22,E22, Posy22, Aceleracao22, Velocidade22,Ang22,Boost22,Nboost22,From2},Objects);
                         collision->
-                            
-   
                             engine(GameRoom,{User1,NewX1,W1,E1,Q1,NewY1,NewAcc1,-2, NewAng1,Boost1,Nboost1,From1},{User2,NewX2,W2,E2,Q2,NewY2,NewAcc2,-2, NewAng2,Boost2,Nboost2,From2},Objects)
                    end;
                 true ->
@@ -474,19 +471,18 @@ engine(GameRoom,Users1,Users2,Objects)->
                     NewBoost2 = Boost2
             end ,
                     
-            if 
-                (NewX2 > 1000 orelse 0 > NewX2 orelse NewY2 > 1000 orelse  0 >NewY2)->
-                    GameRoom ! {playerOut,From2};
-                (NewX1 > 1000 orelse 0 > NewX1 orelse NewY1 > 1000 orelse  0 >NewY1)->
-                    GameRoom ! {playerOut,From1};
-                true -> 
-                    ok
-            end,
             From1 ! {line,"game:position" ++ " "++float_to_list(NewX1) ++ " "++ float_to_list(NewY1) ++ " " ++ float_to_list(NewAng1) ++ " "++ float_to_list(NewX2) ++ " " ++ float_to_list(NewY2)++ " " ++ float_to_list(NewAng2) ++"\n"},
             From2 ! {line,"game:position" ++ " "++float_to_list(NewX2) ++ " "++ float_to_list(NewY2) ++ " " ++ float_to_list(NewAng2) ++ " "++ float_to_list(NewX1) ++ " " ++ float_to_list(NewY1)++ " " ++ float_to_list(NewAng1) ++"\n"},
-            engine(GameRoom,{User1,NewX1,W1,E1,Q1,NewY1,NewAcc1,NewVel1, NewAng1,NewBoost1,NewNboost1,From1},{User2,NewX2,W2,E2,Q2,NewY2,NewAcc2,NewVel2, NewAng2,NewBoost2,NewNboost2,From2},Objects);
+            if 
+                (NewX2 > 1000 orelse 0 > NewX2 orelse NewY2 > 1000 orelse  0 >NewY2)->
+                    GameRoom ! {playerOut,From1};
+                (NewX1 > 1000 orelse 0 > NewX1 orelse NewY1 > 1000 orelse  0 >NewY1)->
+                    GameRoom ! {playerOut,From2};
+                true -> 
+                    engine(GameRoom,{User1,NewX1,W1,E1,Q1,NewY1,NewAcc1,NewVel1, NewAng1,NewBoost1,NewNboost1,From1},{User2,NewX2,W2,E2,Q2,NewY2,NewAcc2,NewVel2, NewAng2,NewBoost2,NewNboost2,From2},Objects)
+            end;
         gameOver ->
-            io:format("game over!!!! ~n"),
+            io:format("game over!!!! Esse "),
             ok
         
     end.
@@ -574,14 +570,16 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
             
             if 
                 Pid1 == From1 ->
+                    From1 ! {line, "game:gameOver venceu\n"},
+                    From2 ! {line, "game:gameOver perdeu\n"},
                     RM ! {matchWinner,User2,From1,Nivel1},
                     RM ! {matchLoser,User1,From2,Nivel2};
                 true ->
+                    From2 ! {line, "game:gameOver venceu\n"},
+                    From1 ! {line, "game:gameOver perdeu\n"},
                     RM ! {matchWinner,User1,From1,Nivel1},
                     RM ! {matchLoser,User2,From2,Nivel2}
-            end,
-            io:format("Game Ended ~n", []);
-            
+            end;            
             
             
         overTime ->
@@ -671,13 +669,16 @@ overtime(Users1,Users2,RM,Engine) ->
                     
                 if 
                     Pid1 == From1 ->
+                        From1 ! {line, "game:gameOver venceu\n"},
+                        From2 ! {line, "game:gameOver perdeu\n"},
                         RM ! {matchWinner,User2,From1,Nivel1},
                         RM ! {matchLoser,User1,From2,Nivel2};
                     true ->
+                        From2 ! {line, "game:gameOver venceu\n"},
+                        From1 ! {line, "game:gameOver perdeu\n"},
                         RM ! {matchWinner,User1,From1,Nivel1},
                         RM ! {matchLoser,User2,From2,Nivel2}
-                end,
-                io:format("Game Ended ~n", []);
+                end;
         %newObject ->
         %    Object =generateObject,
         %    timer:send_after(10000  ,self(),newObject),
@@ -715,7 +716,7 @@ rm(Rooms,Users) ->
                 true ->
                     NewNivel = Nivel
             end,
-            NewUsers = maps:update(User, {Pass,NewNivel,Vitorias+1,true,From}, Users),
+            NewUsers = maps:update(User, {Pass,NewNivel,Vitorias+1,true,From,false}, Users),
             NewRooms = Rooms ;
         {matchLoser,User,Nivel,From}->
             {Pass,Nivel,Vitorias,true,From,true} = maps:get(User,Users),
@@ -729,9 +730,9 @@ rm(Rooms,Users) ->
 
             io:format("Encontrei Partida\n"),
             {Pass,Nivel1,Vitorias,true,From,true} = maps:get(User1,Users),
-            Aux = maps:update(User1,{Pass,Nivel1,Vitorias,false,From},Users),
+            Aux = maps:update(User1,{Pass,Nivel1,Vitorias,true,From,false},Users),
             {Pass1,Nivel2,Vitorias1,true,From1,true} = maps:get(User2,Users),
-            NewUsers = maps:update(User1,{Pass1,Nivel2,Vitorias1,false,From1},Aux),
+            NewUsers = maps:update(User2,{Pass1,Nivel2,Vitorias1,true,From1,false},Aux),
             NewRooms = Rooms ,
             Room = spawn(fun()-> gameRoom({User1,From,0,Nivel1},{User2,From1,0,Nivel2},self()) end),
             Tref = timer:send_after(120000 ,Room,overTime),
@@ -751,9 +752,15 @@ usersManager(Users,String,RM,From)->
 
     case String of 
         "find_game " ++ User ->
-            io:format("finding game"),
-            {_,NewUsers,Nivel} = find_game(User,Users,From),
-            findGame(Users,User,Nivel,RM);
+            [NewUser] = string:tokens(User, "\n"),
+            case find_game(NewUser,Users,From) of 
+                {ok,NewUsers,Nivel} ->
+                    io:format("irei achar jogo\n"),
+                    findGame(Users,NewUser,Nivel,RM);
+                _ ->
+                    io:format("Jovem Gafanhoto\n"),
+                    NewUsers = Users
+            end;
         "create_account " ++ Rest ->
             io:format("Create Account\n"), 
             [User,Pass] = string:tokens(Rest," "),
@@ -762,14 +769,14 @@ usersManager(Users,String,RM,From)->
         "close_account " ++ Rest ->
             io:format("Close Account\n"),
             [User,Pass] = string:tokens(Rest," "),
-            {_, NewUsers} = close_account(User,Pass,Users,From);
+            NewPass = re:replace(Pass, "\n" , "", [global, {return, list}]),
+            {_, NewUsers} = close_account(User,NewPass,Users,From);
         "login "  ++ Rest ->
             io:format("Login\n"),
             [User,Pass] = string:tokens(Rest," "),
             case login(User,Pass,Users,From) of
                 {_, NewUsers,Nivel} ->
-                    io:format("login com sucesso\n"),
-                    findGame(Users,User,Nivel,RM);
+                    io:format("login com sucesso\n");
                 {_,NewUsers} ->
                     io:format("Login não teve sucesso\n"),
                     ok
@@ -780,9 +787,9 @@ usersManager(Users,String,RM,From)->
     NewUsers.
 find_game(User,Map,From)->
     case maps:find(User,Map) of
-        {ok,{Pass,Nivel,Vitorias,true,Nsei,false}} ->
+        {ok,{Pass,Nivel,Vitorias,true,From,false}} ->
             From ! {line,"Users:sucessful\n"},
-            {ok,maps:update(User,{Pass,Nivel,Vitorias,true,Nsei,true},Map),Nivel};
+            {ok,maps:update(User,{Pass,Nivel,Vitorias,true,From,true},Map),Nivel};
         _ ->
             From ! {line,"Users:unsucessful\n"}
 end.

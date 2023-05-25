@@ -66,33 +66,6 @@ void starto(){
   try{
       s = new Socket(host, port);
       cm = new ConnectionManager(s);
-      /*
-      cm.send("users", "create_account anotherone admin");
-            
-      new Thread(() -> {
-          try {
-              
-              String res = cm.receive("Users");
-              System.out.println(res);
-          }
-          catch (Exception e) {
-               // TODO: handle exception
-          }
-      }).start();
-            
-      cm.send("users", "login anotherone admin");
-            
-      new Thread(() -> {
-          try {
-             
-              String res = cm.receive("Users");
-              System.out.println(res);
-          }
-          catch (Exception e) {
-               // TODO: handle exception
-          }
-      }).start();
-      */
           
       }catch(Exception e){
          e.printStackTrace();
@@ -345,6 +318,7 @@ void querJogar()
   if (key == ' ' && once2 )
   {
     once2 = false;
+    System.out.println("users" + "find_game " + user + "\n");
     cm.send("users", "find_game " + user + "\n");
       new Thread(() -> {
             try {
@@ -538,7 +512,6 @@ void esperaJogo(){
 }
 
 void jogo() {
-
   background(204);
   drawEnemy();
   drawMine();
