@@ -31,6 +31,7 @@ public class Triplet
 boolean waiting = true;
 boolean waitGame = true;
 boolean once = true;
+boolean once2 = true;
 float posx ;
 float posy ;
 float posxE ;
@@ -340,9 +341,10 @@ void querJogar()
 {
   background(255,255,0);
   text("Press space to find game",100,500);
-
-  if (key == ' ')
+  
+  if (key == ' ' && once2 )
   {
+    once2 = false;
     cm.send("users", "find_game " + user + "\n");
       new Thread(() -> {
             try {
