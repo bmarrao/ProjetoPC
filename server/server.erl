@@ -370,17 +370,25 @@ engine(GameRoom,Users1,Users2,Objects)->
                 0>Velocidade1->
                     NewVel1 = Velocidade1 + 0.66*NewAcc1;
                 true ->
-                    %if acc == 0 diminur vel
+                    if NewAcc1 == 0 ->
+                        NewVel1 = Velocidade1 - 0.066;
+                    true ->
 
-                    NewVel1 = Velocidade1 + NewAcc1*0.15
+                        NewVel1 = Velocidade1 + NewAcc1*0.15
+                    end
             end,
             if 
                 
                 0>Velocidade2->
                     NewVel2 = Velocidade2 +  0.66*NewAcc2;
                 true ->
+                    if NewAcc2 == 0 ->
+                        NewVel2 = Velocidade2 - 0.066;
+                    true ->
 
-                    NewVel2 = Velocidade2 + NewAcc2*0.15 
+
+                        NewVel2 = Velocidade2 + NewAcc2*0.15 
+                    end
             end,
             
             NewX1 = Posx1 + math:cos(NewAng1)*NewVel1,
