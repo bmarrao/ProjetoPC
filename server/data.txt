@@ -1,0 +1,2 @@
+tigas;admin;2;2
+ttata;admin;1;1

@@ -80,10 +80,7 @@ void starto()
       {
         try 
         {
-          System.out.println("ola antes");
           String res = cm.receive("Scoreboard");
-          System.out.println(res);
-          System.out.println("ola depois");
           scores = res.split(" ");
           int num = Integer.parseInt(scores[0]);
           for (int i = 0 ; i < num; i++)
@@ -130,12 +127,9 @@ void gameThread()
             while(!gameOver)
             {
               res = cm.receive("game");
-              //System.out.println(res);
               estado = 4;
               if(!(res == null))
               {
-                //System.out.println("recebi posicao");
-                //System.out.println(res+"pos");
                 String[] sep = res.split(" ");
                 if (sep[0].equals("position")){
                   posx =Float.parseFloat(sep[1]);
@@ -179,7 +173,7 @@ void gameThread()
             }
           }
           catch(Exception e){
-            System.out.println("Thread crashou POs");
+            gameThread();
           }
         }).start();
 }
@@ -244,7 +238,6 @@ void querJogar()
             try {
                 
                 String res = cm.receive("Users");
-                System.out.println(res);
                 if(res.equals("sucessful"))
                 {
                   estado = 3;
@@ -396,13 +389,10 @@ void criarConta()
     once = false;
 
     cm.send("users", "create_account " + user + " " + pass + "\n");
-    System.out.println("outro ola" + user + pass + "Oi" );
     new Thread(() -> {    
         try {
               
           String res = cm.receive("Users");
-          System.out.println(res + name);
-          System.out.println(res.equals("sucessful"));
           if(res.equals("sucessful"))
           {
             contaCriadaSucess = true;
@@ -560,13 +550,11 @@ public class ConnectionManager
     {
         try
         {
-            System.out.println(type + ":" + message); 
             out.println(type + ":" + message);
             out.flush();
         }
         catch(Exception e)
-        {
-          System.out.println("SERAASODIASODJAS"); 
+        { 
 
         }
     }
