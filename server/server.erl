@@ -168,7 +168,10 @@ generateObject()->
     {rand:uniform(3),rand:uniform(1000),rand:uniform(1000)}.
  
 gameTimer(Engine)->
-    receive after 15 ->
+    receive
+        gameOver ->
+            ok; 
+        after 15 ->
         Engine ! timeout,
         gameTimer(Engine)
     end.
@@ -365,6 +368,7 @@ engine(GameRoom,Users1,Users2,Objects)->
                 0>Velocidade1->
                     NewVel1 = Velocidade1 + 0.66*NewAcc1;
                 true ->
+                    %if acc == 0 diminur vel
 
                     NewVel1 = Velocidade1 + NewAcc1*0.15
             end,
