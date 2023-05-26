@@ -61,15 +61,37 @@ boolean ready = false;
 boolean name = true;
 boolean senha = false;
 
-void starto(){
+void starto()
+{
   
   String host = "localhost";
   int port = 1234;
-    
+
   try{
       s = new Socket(host, port);
       cm = new ConnectionManager(s);
-          
+      cm.send("scoreBoard","scoreboard");
+      new Thread(() -> 
+      {
+        try 
+        {
+          System.out.println("ola antes");
+          String res = cm.receive("Scoreboard");
+          System.out.println(res);
+          System.out.println("ola depois");
+          scores = res.split(" ");
+          int num = Integer.parseInt(scores[0]);
+          for (int i = 0 ; i < num; i++)
+          {
+            text("User " + scores[i*2+1] + "Vitorias: " + scores[i*2+2],100,300 * (i+1));
+          } 
+        }
+        catch (Exception e) 
+        {
+          // TODO: handle exception
+        }
+      }).start();
+
       }catch(Exception e){
          e.printStackTrace();
          System.exit(0);
@@ -81,7 +103,8 @@ void starto(){
 
 
 
-void setup() {
+void setup() 
+{
   starto();
   size(1000, 1000);
   noStroke();
@@ -90,119 +113,6 @@ void setup() {
   keys0 = false;
   keys1 = false;
   keys2 = false;
-
-/*
-    new Thread(() -> {
-          try{
-            String res ;
-            while(!gameOver)
-            {
-              res = cm.receive("game");
-            
-              if(!(res == null))
-              {
-                //System.out.println("recebi posicao");
-                //System.out.println(res+"pos");
-                String[] sep = res.split(" ");
-                if (sep[0].equals("position")){
-                  posx =Float.parseFloat(sep[1]);
-                  posy =Float.parseFloat(sep[2]);
-                  ang = Float.parseFloat(sep[3]);
-                  posxE =Float.parseFloat(sep[4]);
-                  posyE = Float.parseFloat(sep[5]);
-                  angE = Float.parseFloat(sep[6]);
-                }
-                else if (sep[0].equals("gameOver"))
-                {
-                  estado = 3;
-                }
-                else if (sep[0].equals("tiraObjeto"))
-                {
-                  Float cor = Float.parseFloat(sep[1]);
-                  Float x = Float.parseFloat(sep[2]);
-                  Float y = Float.parseFloat(sep[3]);
-                  Iterator <Triplet> itr = objetos.iterator();
-                  while (itr.hasNext())
-                  {
-                    Triplet test = itr.next();
-                    if (test.Equals(cor,x,y))
-                    {
-                      itr.remove();
-                    }
-                  }
-                }
-                else 
-                {
-                  String cor = sep[1];
-                  String x = sep[2];
-                  String y = sep[3];
-                  Triplet triplet = new Triplet(Float.parseFloat(cor),Float.parseFloat(x),Float.parseFloat(y));
-                  objetos.add(triplet);
-                
-                }
-              }
-            }
-          }
-          catch(Exception e){
-            System.out.println("Thread crashou POs");
-          }
-        }).start();
-    */
-    /*
-    new Thread(() -> {
-      try{
-            String res ;
-            while(!gameOver)
-            {
-              
-              res = cm.receive("object",9000);
-              
-              
-              if (!(res == null))
-              {
-              //System.out.println("recebi objecto");
-              //System.out.println(res+"object");
-              String[] vals = res.split(" ");
-              String cor = vals[0];
-              String x = vals[1];
-              String y = vals[2];
-              objetos.add(Float.parseFloat(cor)); 
-              objetos.add(Float.parseFloat(x));
-              objetos.add(Float.parseFloat(y)); 
-              }
-            }
-      }catch(Exception e){
-        System.out.println("Thread crashou Object");
-      }
-        }).start();
-    */
-    /*
-    new Thread(() -> 
-    {
-      try
-      {
-            String res ;
-            while(!gameOver)
-            {
-              res = cm.receive("gameOver");
-              System.out.println(res);
-              if (res.equals("won"))
-              {
-                // 
-              }
-              else
-              {
-                //
-              }
-              gameOver = true;
-            }
-      }
-      catch(Exception e)
-      {
-        System.out.println("Thread crashou");
-      }
-        }).start();
-        */
 }
 
 
@@ -272,12 +182,6 @@ void gameThread()
 }
 
 void drawObjects(){
-  /*
-  cNum = 1;
-  for (int i = 0; i< cNum;i++){
-    quad(objetos[2*i]-25,objetos[2*i + 1]-25 ,objetos[2*i]+25,objetos[2*i + 1]-25,objetos[2*i]+25,objetos[2*i + 1]+25  ,objetos[2*i]-25,objetos[2*i + 1]+25);
-  }
-  */
   for (Triplet t : objetos)
   {
     if (t.getFirst() == 1)
@@ -414,14 +318,14 @@ void fecharConta()
   }
 }
 void menu(){
-  int indent = 25;
+  int indent = 30;
   background(255,255,0);
   textSize(56);
   fill(50);
-  text("Login - L ",indent,190);
-  text("Criar conta - C",indent,230);
-  text("Scoreboard - S",indent,270);
-  text("Fechar conta - F",indent,310);
+  text("Login - L ",indent,200);
+  text("Criar conta - C",indent,260);
+  text("Scoreboard - S",indent,320);
+  text("Fechar conta - F",indent,380);
 }
 
 void login(){
@@ -540,44 +444,14 @@ void jogo() {
 void scoreboard()
 {
   background(255,255,0);
-  text("Scoreboard",100,300);
-  if (scoreOnce)
-  {
-
-    cm.send("scoreboard","\n");
-    
-    new Thread(() -> 
-    {
-      try 
-      {
-        System.out.println("ola antes");
-        String res = cm.receive("Scoreboard");
-        System.out.println(res);
-        System.out.println("ola depois");
-        scores = res.split(" ");
-        scoreOnce = false;
-        int num = Integer.parseInt(scores[0]);
-        for (int i = 0 ; i < num; i++)
-        {
-          text("User " + scores[i*2+1] + "Vitorias: " + scores[i*2+2],100,300 * (i+1));
-        } 
-      }
-      catch (Exception e) 
-      {
-        // TODO: handle exception
-      }
-    }).start();
-  } 
-  else
-  {
+  text("Scoreboard",100,200);
     int num = Integer.parseInt(scores[0]);
     for (int i = 0 ; i < num; i++)
     {
-      text("User " + scores[i*2+1] + "Vitorias: " + scores[i*2+2],100,300 * (i+1));
+      text("User: " + scores[i*2+1],100,360  +(i * 60));
+      text("Vitorias: " + scores[i*2+2],600,360  +(i * 60));
     } 
-  }
   text("Para sair aperte X",100,900);
-
 }
 
 
@@ -602,7 +476,10 @@ void keyPressed() {
   else if((key == 'L' || key == 'l') && (estado == 0 )){
     estado = 1;
   }
-  else if((key == 'S' || key == 's') && (estado == 0 )){
+  else if((key == 'S' || key == 's') && (estado == 0 ))
+  {
+    cm.send("keyPressed","w");
+
     estado = 5;
   }
   else if((key == 'X' || key == 'x') && (estado == 5 )){

@@ -91,13 +91,16 @@ user(Sock ,RM,Room) ->
                     io:format("Received user \n"),
                     RM ! {mensagem, Rest,self()};
                 "keyPressed:" ++ Rest->
-                    %io:format("Received keypress \n"),
+                    io:format("Received keypress \n"),
                     Room ! {keyp,Rest,self()};
                 "keyReleased:" ++ Rest->
-                    %io:format("Received keypress \n"),
+                    io:format("Received keypress \n"),
                     Room ! {keyr,Rest,self()};
+                "scoreBoard:" ++ Rest ->
+                    io:format("Received scoreBoard \n"),
+                    RM ! {scoreBoard,self()};
                 _ ->
-                    %io:format("Received ~s~n", [Data]),
+                    io:format("Received ~s~n", [Data]),
                     Room ! {line,Data}
                 end, 
             user(Sock,RM,Room);
@@ -125,7 +128,7 @@ user(Sock ,RM,Room,User) ->
         {changeRoom, Pid}->
             user(Sock, RM,Pid,User);
         {line, Data} ->
-            io:format("Sending data ~s~n\n", [Data]),
+            %io:format("Sending data ~s~n\n", [Data]),
             gen_tcp:send(Sock, Data),
             user(Sock, RM,Room,User);
         {tcp, _, Data} ->
@@ -137,10 +140,10 @@ user(Sock ,RM,Room,User) ->
                     io:format("Received scoreBoard \n"),
                     RM ! {scoreBoard,self()};
                 "keyPressed:" ++ Rest->
-                    %io:format("Received keypress \n"),
+                    io:format("Received keypress \n"),
                     Room ! {keyp,Rest,self()};
                 "keyReleased:" ++ Rest->
-                    %io:format("Received keypress \n"),
+                    io:format("Received keypress \n"),
                     Room ! {keyr,Rest,self()};
                 _ ->
                     io:format("Received ~s~n", [Data]),
@@ -722,7 +725,6 @@ rm(Rooms,Users) ->
             NewUsers = maps:update(User, {Pass,Nivel,Vitorias,true,From,false}, Users),
             NewRooms = Rooms ;
         {scoreBoard,From}->
-    
             From ! {line,listagemVitorias(Users)} ,
             NewUsers = Users,
             NewRooms = Rooms ;
@@ -799,9 +801,9 @@ listagemVitorias(Users)->
     NewLista = lists:reverse(lists:keysort(2,Lista)),
     if 
         length(NewLista) >= 5->
-            "Scoreboard:" ++ "5" ++ stringLista(5,NewLista);
+            "Scoreboard:" ++ "5" ++ " " ++ stringLista(5,NewLista);
         true ->
-            "Scoreboard:" ++ integer_to_list(length(NewLista)) ++ stringLista(length(NewLista),NewLista)
+            "Scoreboard:" ++ integer_to_list(length(NewLista)) ++  " "++ stringLista(length(NewLista),NewLista)
     end .
 
 stringLista(N,[{User,Vic}|T])->
