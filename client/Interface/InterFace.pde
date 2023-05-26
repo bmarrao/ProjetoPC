@@ -44,6 +44,7 @@ float vel ;
 boolean keys1;
 boolean keys2;
 String [] scores;
+String resultado = "";
 boolean keys0;
 ArrayList < Triplet > objetos = new ArrayList < Triplet > ();
 float cNum = 0;
@@ -142,10 +143,9 @@ void gameThread()
                 }
                 else if (sep[0].equals("gameOver"))
                 {
-                  System.out.println("OIIIIII");
                   once2 = true;
-                  text(sep[1],300,300);
-                  estado = 6;
+                  resultado = sep[1];
+                  estado = 8;
                   gameOver = true;
                 }
                 else if (sep[0].equals("tiraObjeto"))
@@ -279,10 +279,20 @@ void draw() {
     case 7:
       fecharConta();
       break;
+    case 8:
+      acabou();
+      break;
     default :
       menu();
     break;		
   }
+}
+
+void acabou()
+{
+  background(255,255,0);
+  text(resultado,400,400);
+
 }
 
 void fecharConta()
@@ -301,7 +311,7 @@ void fecharConta()
    if(senha && name && once)
   {
     once = false;
-    cm.send("users", "create_account " + user + " " + pass + "\n");
+    cm.send("users", "close_account " + user + " " + pass + "\n");
     new Thread(() -> {
           try {
               
@@ -373,10 +383,10 @@ void criarConta()
     text("Username: " + user,25,190);
     text("Password: " + input,25,230);
   }
+
   if( senha && name && once)
   {
     once = false;
-
     cm.send("users", "create_account " + user + " " + pass + "\n");
     System.out.println("outro ola" + user + pass + "Oi" );
     new Thread(() -> {    
@@ -384,11 +394,20 @@ void criarConta()
               
           String res = cm.receive("Users");
           System.out.println(res + name);
-          System.out.println(res.equals("sucessful\n"));
-          if(res.equals("sucessful\n"))
-          {
-            System.out.println("entrei aqui");
-            estado = 6;
+          System.out.println(res.equals("sucessful"));
+          if(res.equals("sucessful")){
+            System.out.println("Entrei na condicao");
+            cm.send("users", "login " + user + " " + pass + "\n");
+            
+            System.out.println("Entrei na outra thread");
+            String res2 = cm.receive("Users");
+            System.out.println(res2);
+            if(res.equals("sucessful"))
+            {
+              System.out.println("entrei aqui");
+              estado = 6;
+            }
+                 
           }
         }
         catch (Exception e) {
@@ -396,23 +415,8 @@ void criarConta()
         }
       }).start();
   
-    cm.send("login", "login " + user + " " + pass + "\n");
-            
-      new Thread(() -> {
-          try {
-             
-               String res = cm.receive("Users");
-                System.out.println(res);
-                if(res.equals("sucessful"))
-                {
-                  System.out.println("entrei aqui");
-                  estado = 3;
-                }
-          }
-          catch (Exception e) {
-               // TODO: handle exception
-          }
-      }).start();
+    
+
             
   }
 }
@@ -478,8 +482,6 @@ void keyPressed() {
   }
   else if((key == 'S' || key == 's') && (estado == 0 ))
   {
-    cm.send("keyPressed","w");
-
     estado = 5;
   }
   else if((key == 'X' || key == 'x') && (estado == 5 )){
