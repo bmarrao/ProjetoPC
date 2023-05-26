@@ -1,5 +1,5 @@
 -module(server).
--export([start/2, stop/0,lerArquivo/1,escreverArquivo/2,acharOnline/2,listagemVitorias/1]).
+-export([start/2, stop/0,lerArquivo/1,escreverArquivo/2,acharOnline/2,listagemVitorias/1,stringLista/2]).
 
 %Precisamos adicionar mensagens q o servidor recebe do cliente com a localização para sabermos se "matou" o inimigo, se ganhou 
 %Algum bonus , etc ..
@@ -125,7 +125,7 @@ user(Sock ,RM,Room,User) ->
         {changeRoom, Pid}->
             user(Sock, RM,Pid,User);
         {line, Data} ->
-            %io:format("Sending data ~s~n\n", [Data]),
+            io:format("Sending data ~s~n\n", [Data]),
             gen_tcp:send(Sock, Data),
             user(Sock, RM,Room,User);
         {tcp, _, Data} ->
@@ -133,7 +133,8 @@ user(Sock ,RM,Room,User) ->
                 "users:" ++ Rest ->
                     io:format("Received user \n"),
                     RM ! {mensagem, Rest,self()};
-                "Scoreboard:" ++ Rest ->
+                "scoreboard:" ++ Rest ->
+                    io:format("Received scoreBoard \n"),
                     RM ! {scoreBoard,self()};
                 "keyPressed:" ++ Rest->
                     %io:format("Received keypress \n"),
@@ -169,11 +170,9 @@ generateObject()->
  
 gameTimer(Engine)->
     receive
-        gameOver ->
-            ok; 
         after 15 ->
-        Engine ! timeout,
-        gameTimer(Engine)
+            Engine ! timeout,
+            gameTimer(Engine)
     end.
 
 objectTimer(Engine)->
@@ -313,8 +312,8 @@ engine(GameRoom,Users1,Users2,Objects)->
         {object,Objeto}->
             NewObjects = Objects ++ [Objeto],
             {Cor,X,Y} = Objeto,
-            From1 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ float_to_list(X) ++ " " ++ float_to_list(Y) ++ "\n"},
-            From2 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ float_to_list(X) ++ " " ++ float_to_list(Y) ++ "\n"},
+            From1 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ integer_to_list(X) ++ " " ++ integer_to_list(Y) ++ "\n"},
+            From2 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ integer_to_list(X) ++ " " ++ integer_to_list(Y) ++ "\n"},
             engine(GameRoom,Users1,Users2,NewObjects);
         timeout ->
            
@@ -517,11 +516,7 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
     {User2,From2,Pontos2,Nivel2} = Users2,
    
     receive
-        {keyp,Data,Pid} ->
-            %io:format("Pattern recognized ~p~n",[Pid]),
-            
-            %io:format("user ~p~n",[User1]),
-            
+        {keyp,Data,Pid} ->  
             if 
                 Pid == From1->
                     
@@ -727,6 +722,7 @@ rm(Rooms,Users) ->
             NewUsers = maps:update(User, {Pass,Nivel,Vitorias,true,From,false}, Users),
             NewRooms = Rooms ;
         {scoreBoard,From}->
+    
             From ! {line,listagemVitorias(Users)} ,
             NewUsers = Users,
             NewRooms = Rooms ;
@@ -799,7 +795,7 @@ find_game(User,Map,From)->
 end.
 
 listagemVitorias(Users)->
-    Lista = [{User,Vic} ||{User,{_,_,Vic,_,_}} <- maps:to_list(Users)],
+    Lista = [{User,Vic} ||{User,{_,_,Vic,_,_,_}} <- maps:to_list(Users)],
     NewLista = lists:reverse(lists:keysort(2,Lista)),
     if 
         length(NewLista) >= 5->
@@ -809,10 +805,13 @@ listagemVitorias(Users)->
     end .
 
 stringLista(N,[{User,Vic}|T])->
-    User ++ integer_to_list(Vic) ++   stringLista(N-1,T);
+    if 
+        N == 0->
+            "\n";
+        true ->
+            User ++ " " ++ integer_to_list(Vic) ++ " " ++ stringLista(N-1,T)
+    end.
     
-stringLista(0,_)->
-    "\n".
     
 
 

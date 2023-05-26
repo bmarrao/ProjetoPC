@@ -28,8 +28,6 @@ public class Triplet
     public Float getSecond() { return second; }
     public Float getThird() { return third; }
 }
-
-boolean scoreOnce = true;
 boolean waiting = true;
 boolean waitGame = true;
 boolean once = true;
@@ -43,7 +41,6 @@ float ang ;
 float vel ;
 boolean keys1;
 boolean keys2;
-String [] scores;
 boolean keys0;
 ArrayList < Triplet > objetos = new ArrayList < Triplet > ();
 float cNum = 0;
@@ -233,7 +230,7 @@ void gameThread()
                 else if (sep[0].equals("gameOver"))
                 {
                   System.out.println("OIIIIII");
-                  once2 = true;
+
                   text(sep[1],300,300);
                   estado = 6;
                   gameOver = true;
@@ -280,18 +277,7 @@ void drawObjects(){
   */
   for (Triplet t : objetos)
   {
-    if (t.getFirst() == 1)
-    {
-      fill(255,0,0);
-    }
-    else if (t.getFirst() == 2)
-    {
-      fill(0,255,0);
-    }
-    else 
-    {
-      fill(0,0,255);
-    }
+    fill(t.getFirst());
     ellipse(t.getSecond(), t.getThird(), 75, 75);
   }
 }
@@ -338,7 +324,6 @@ void querJogar()
             try {
                 
                 String res = cm.receive("Users");
-                System.out.println(res);
                 if(res.equals("sucessful"))
                 {
                   estado = 3;
@@ -377,7 +362,7 @@ void draw() {
       break;
     default :
       menu();
-    break;		
+    break;    
   }
 }
 
@@ -537,45 +522,29 @@ void jogo() {
 
 }
 
-void scoreboard()
-{
-  background(255,255,0);
+void scoreboard(){
   text("Scoreboard",100,300);
-  if (scoreOnce)
-  {
+  cm.send("Scoreboard","scoreboard");
 
-    cm.send("scoreboard","\n");
-    
-    new Thread(() -> 
-    {
-      try 
-      {
-        System.out.println("ola antes");
-        String res = cm.receive("Scoreboard");
-        System.out.println(res);
-        System.out.println("ola depois");
-        scores = res.split(" ");
-        scoreOnce = false;
-        int num = Integer.parseInt(scores[0]);
-        for (int i = 0 ; i < num; i++)
-        {
-          text("User " + scores[i*2+1] + "Vitorias: " + scores[i*2+2],100,300 * (i+1));
-        } 
-      }
-      catch (Exception e) 
-      {
-        // TODO: handle exception
-      }
-    }).start();
-  } 
-  else
+  new Thread(() -> 
   {
-    int num = Integer.parseInt(scores[0]);
-    for (int i = 0 ; i < num; i++)
+    try 
     {
-      text("User " + scores[i*2+1] + "Vitorias: " + scores[i*2+2],100,300 * (i+1));
-    } 
-  }
+             
+      String res = cm.receive("Scoreboard");
+      System.out.println(res);
+      String[] arr = res.split(" ");
+      int num = Integer.parseInt(arr[0]);
+      for (int i = 0 ; i < num; i++)
+      {
+        text("User " + arr[i*2+1] + "Vitorias: " + arr[i*2+2],100,300 * (i+1));
+      } 
+    }
+    catch (Exception e) 
+    {
+      // TODO: handle exception
+    }
+  }).start();
   text("Para sair aperte X",100,900);
 
 }
