@@ -6,13 +6,13 @@ import java.io.*;
 import java.net.*;
 import java.util.Iterator;
 
-public class Triplet
+public class Triplett
 {
-    private final Float first;
+    private final float  first;
     private final Float second;
     private final Float third;
 
-    public Triplet(Float first, Float second, Float third) 
+    public Triplett(Float first, Float second, Float third) 
     {
         this.first = first;
         this.second = second;
@@ -29,6 +29,8 @@ public class Triplet
     public Float getThird() { return third; }
 }
 
+boolean contaCriadaSucess = false;
+boolean contaCriadaNoSucess = false;
 boolean scoreOnce = true;
 boolean waiting = true;
 boolean waitGame = true;
@@ -46,7 +48,7 @@ boolean keys2;
 String [] scores;
 String resultado = "";
 boolean keys0;
-ArrayList < Triplet > objetos = new ArrayList < Triplet > ();
+ArrayList < Triplett > objetos = new ArrayList < Triplett > ();
 float cNum = 0;
 boolean gameOver = false;
 ConnectionManager cm;
@@ -67,6 +69,8 @@ void starto()
   
   String host = "localhost";
   int port = 1234;
+  Triplett triplet = new Triplett(1.0,-500.0,-500.0);
+  objetos.add(triplet);
 
   try{
       s = new Socket(host, port);
@@ -126,7 +130,7 @@ void gameThread()
             while(!gameOver)
             {
               res = cm.receive("game");
-              System.out.println(res);
+              //System.out.println(res);
               estado = 4;
               if(!(res == null))
               {
@@ -148,27 +152,26 @@ void gameThread()
                   estado = 8;
                   gameOver = true;
                 }
-                else if (sep[0].equals("tiraObjeto"))
-                {
+                else if (sep[0].equals("tiraObjeto")){
                   Float cor = Float.parseFloat(sep[1]);
                   Float x = Float.parseFloat(sep[2]);
                   Float y = Float.parseFloat(sep[3]);
-                  Iterator <Triplet> itr = objetos.iterator();
-                  while (itr.hasNext())
-                  {
-                    Triplet test = itr.next();
-                    if (test.Equals(cor,x,y))
-                    {
-                      itr.remove();
-                    }
+                  
+                  int n = 0;
+                  int aux = 0;
+                  for(Triplett t : objetos){
+                        
+                    if ((Float.compare(t.getSecond() , x)== 0)&&(Float.compare(t.getThird() , y)== 0) && (Float.compare(t.getFirst() , cor)== 0)) aux = n;
+                    n++;
                   }
+                  objetos.remove(aux);
                 }
                 else 
                 {
                   String cor = sep[1];
                   String x = sep[2];
                   String y = sep[3];
-                  Triplet triplet = new Triplet(Float.parseFloat(cor),Float.parseFloat(x),Float.parseFloat(y));
+                  Triplett triplet = new Triplett(Float.parseFloat(cor),Float.parseFloat(x),Float.parseFloat(y));
                   objetos.add(triplet);
                 
                 }
@@ -182,7 +185,7 @@ void gameThread()
 }
 
 void drawObjects(){
-  for (Triplet t : objetos)
+  for (Triplett t : objetos)
   {
     if (t.getFirst() == 1)
     {
@@ -236,7 +239,6 @@ void querJogar()
   if (key == ' ' && once2 )
   {
     once2 = false;
-    System.out.println("users" + "find_game " + user + "\n");
     cm.send("users", "find_game " + user + "\n");
       new Thread(() -> {
             try {
@@ -311,14 +313,14 @@ void fecharConta()
    if(senha && name && once)
   {
     once = false;
-    cm.send("users", "close_account " + user + " " + pass + "\n");
+    cm.send("users", "close_account " + user + " " + pass );
     new Thread(() -> {
           try {
               
               String res = cm.receive("Users");
               if(res.equals("sucessful"))
               {
-                estado = 0;
+                System.exit(0);
               }
           }
           catch (Exception e) {
@@ -373,7 +375,13 @@ void login(){
 void criarConta()
 {
   background(255,255,0);
-  if (name)
+  if(contaCriadaSucess){
+    text("Conta criada com sucesso!" ,100,400);
+  }
+  else if(contaCriadaNoSucess){
+    text("Conta não foi criada, tente de novo!" ,100,400);
+  }
+  else if (name)
   {
     text("Username: " + input,25,190);
     text("Password: " ,25,230);
@@ -383,10 +391,10 @@ void criarConta()
     text("Username: " + user,25,190);
     text("Password: " + input,25,230);
   }
-
-  if( senha && name && once)
+  if( senha && name && once )
   {
     once = false;
+
     cm.send("users", "create_account " + user + " " + pass + "\n");
     System.out.println("outro ola" + user + pass + "Oi" );
     new Thread(() -> {    
@@ -395,28 +403,18 @@ void criarConta()
           String res = cm.receive("Users");
           System.out.println(res + name);
           System.out.println(res.equals("sucessful"));
-          if(res.equals("sucessful")){
-            System.out.println("Entrei na condicao");
-            cm.send("users", "login " + user + " " + pass + "\n");
-            
-            System.out.println("Entrei na outra thread");
-            String res2 = cm.receive("Users");
-            System.out.println(res2);
-            if(res.equals("sucessful"))
-            {
-              System.out.println("entrei aqui");
-              estado = 6;
-            }
-                 
+          if(res.equals("sucessful"))
+          {
+            contaCriadaSucess = true;
+          }
+          else{
+            contaCriadaNoSucess = true;
           }
         }
         catch (Exception e) {
                // TODO: handle exception
         }
       }).start();
-  
-    
-
             
   }
 }
@@ -558,15 +556,17 @@ public class ConnectionManager
         }
 
     }
-    public void send(String type ,String message) 
+    public synchronized void send(String type ,String message) 
     {
         try
         {
+            System.out.println(type + ":" + message); 
             out.println(type + ":" + message);
             out.flush();
         }
         catch(Exception e)
         {
+          System.out.println("SERAASODIASODJAS"); 
 
         }
     }

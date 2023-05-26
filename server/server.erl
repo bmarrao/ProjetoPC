@@ -1,5 +1,5 @@
 -module(server).
--export([start/2, stop/0,lerArquivo/1,escreverArquivo/2,acharOnline/2,listagemVitorias/1,stringLista/2]).
+-export([start/2, stop/0,lerArquivo/1,escreverArquivo/2,acharOnline/2,  listagemVitorias/1,stringLista/2]).
 
 %Precisamos adicionar mensagens q o servidor recebe do cliente com a localização para sabermos se "matou" o inimigo, se ganhou 
 %Algum bonus , etc ..
@@ -91,10 +91,10 @@ user(Sock ,RM,Room) ->
                     io:format("Received user \n"),
                     RM ! {mensagem, Rest,self()};
                 "keyPressed:" ++ Rest->
-                    io:format("Received keypress \n"),
+                    %io:format("Received keypress \n"),
                     Room ! {keyp,Rest,self()};
                 "keyReleased:" ++ Rest->
-                    io:format("Received keypress \n"),
+                    %io:format("Received keypress \n"),
                     Room ! {keyr,Rest,self()};
                 "scoreBoard:" ++ Rest ->
                     io:format("Received scoreBoard \n"),
@@ -140,13 +140,12 @@ user(Sock ,RM,Room,User) ->
                     io:format("Received scoreBoard \n"),
                     RM ! {scoreBoard,self()};
                 "keyPressed:" ++ Rest->
-                    io:format("Received keypress \n"),
                     Room ! {keyp,Rest,self()};
                 "keyReleased:" ++ Rest->
-                    io:format("Received keypress \n"),
                     Room ! {keyr,Rest,self()};
                 _ ->
                     io:format("Received ~s~n", [Data]),
+                    io:format("Pq nao funcionas\n"),
                     Room ! {line,Data}
                 end, 
             user(Sock,RM,Room,User);
@@ -184,7 +183,6 @@ objectTimer(Engine)->
         Engine ! {object,Object},
         objectTimer(Engine)
 
-        %mandar pra engine
     end.
 
 maiorNoventa(Ang)->
@@ -199,10 +197,7 @@ maiorNoventa(Ang)->
     end,
     NewAng.
 checkColision(NewX1,NewY1,NewAng1,NewX2,NewY2,NewAng2)->
-    %Normal11 = maiorNoventa(NewAng1 + math:pi()/2),
-    %Normal12 = maiorNoventa(NewAng1 - math:pi()/2),
-    %Normal21 = maiorNoventa(NewAng2 + math:pi()/2),
-    %Normal22 = maiorNoventa(NewAng2 - math:pi()/2),
+
 
     
 
@@ -215,9 +210,6 @@ checkColision(NewX1,NewY1,NewAng1,NewX2,NewY2,NewAng2)->
     Dot_product2 = Directionx2 * (NewX1 - NewX2) + Directiony2 * (NewY1 - NewY2),
 
     if 
-  %      (Dot_product1 < 0) and (Dot_product2 < 0)->
- %       
-%            error;
         Dot_product1 < 0->
             pontoP1;
         Dot_product2 < 0->
@@ -229,18 +221,31 @@ checkColision(NewX1,NewY1,NewAng1,NewX2,NewY2,NewAng2)->
 
 
 
-atingiuObjeto ([H | T],X,Y)->
+atingiuObjeto ([H | T],Objects,X,Y,X2,Y2)->
     {Cor, Xobj ,Yobj} = H ,
     DistAux = math:pow((X -Xobj),2) + math:pow((Y -Yobj),2),
     Dist = math:sqrt(DistAux),
+    DistAux2 = math:pow((X2 -Xobj),2) + math:pow((Y2 -Yobj),2),
+    Dist2 = math:sqrt(DistAux2),
+    
     if 
-        100>Dist->
-            {Cor,Xobj,Yobj};
+        62.5>Dist->
+            %io:format("distancias ~f~n", [Dist]),
+            %io:format("distancias2 ~f~n", [Dist2]),
+            NewObj = lists:delete(H, Objects),
+            io:format("got object~n"),
+            {Cor,Xobj,Yobj,NewObj,user1};
+        62.5>Dist2->
+            %io:format("distancias ~f~n", [Dist]),
+            %io:format("distancias2 ~f~n", [Dist2]),
+            NewObj = lists:delete(H, Objects),
+            io:format("got object~n"),
+            {Cor,Xobj,Yobj,NewObj,user2};
         true ->
-            atingiuObjeto(T, X, Y)
+            atingiuObjeto(T, Objects,X, Y,X2,Y2)
     end;
 
-atingiuObjeto ([],_,_)-> [].
+atingiuObjeto ([],Objects,_,_,_,_)-> Objects.
 engine(GameRoom,Users1,Users2,Objects)->
     {User1,Posx1,W1,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1,From1} = Users1,
     {User2,Posx2,W2,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2} = Users2,
@@ -266,11 +271,8 @@ engine(GameRoom,Users1,Users2,Objects)->
                         "q\n" ->
                             engine(GameRoom,{User1,Posx1,W1,E1,true,Posy1,Aceleracao1,Velocidade1, Ang1,Boost1,Nboost1,From1},Users2,Objects)
                         end;
-                    
-                    
-                
                 Pid == From2 ->
-                    %io:format("teste keyp u2\n"),
+
                     case Key of
                         "w\n" ->
                             engine(GameRoom,Users1,{User2,Posx2,true,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,Boost2,Nboost2,From2},Objects);
@@ -322,72 +324,82 @@ engine(GameRoom,Users1,Users2,Objects)->
            
             case W1 of
                 true -> 
-                    NewAcc1 = Aceleracao1 + 0.066;
+                    if Aceleracao1 >=1 ->
+                        NewAcc1 = 1;
+                    true ->
+                        NewAcc1 = Aceleracao1 + 0.006
+                    end;
                 false ->
                     if 
-                        0.09>=Aceleracao1->
+                        0.009>=Aceleracao1->
 
                             NewAcc1 = 0;
-                        Aceleracao1>0.09 ->
-                            NewAcc1 = Aceleracao1 - 0.09
-                end
+                        Aceleracao1>0.009 ->
+                            NewAcc1 = Aceleracao1 - 0.009
+                    end
                   
             
             end,
             case {E1,Q1} of
                 {true,false} ->
-                    NewAng1 = Ang1 + math:pi()/128;
+                    NewAng1 = Ang1 + math:pi()/100;
                 
                 {false,true} ->
-                    NewAng1 = Ang1 -  math:pi()/128;
+                    NewAng1 = Ang1 -  math:pi()/100;
                 _ ->
                     NewAng1 = Ang1
             end,
 
             case W2 of
                 true -> 
-                    NewAcc2 = Aceleracao2 + 0.066;
+                    if Aceleracao2 >=1 ->
+                        NewAcc2 = 1;
+                    true ->
+                        NewAcc2 = Aceleracao2 + 0.006
+                    end;
                 false ->
                     if 
-                        0.09>=Aceleracao2->
+                        0.009>=Aceleracao2->
 
                             NewAcc2 = 0;
-                        Aceleracao2>0.09 ->
-                            NewAcc2 = Aceleracao2 - 0.09
-                end
+                        Aceleracao2>0.009 ->
+                            NewAcc2 = Aceleracao2 - 0.009
+                    end
                   
+            
             end,
             case {E2,Q2} of
                 {true,false} ->
-                    NewAng2 = Ang2 + math:pi()/128;
+                    NewAng2 = Ang2 + math:pi()/100;
                 {false,true} ->
-                    NewAng2 = Ang2 -  math:pi()/128;
+                    NewAng2 = Ang2 -  math:pi()/100;
                 _ ->
                     NewAng2 = Ang2
             end,
             if 
                
-                0>Velocidade1->
-                    NewVel1 = Velocidade1 + 0.66*NewAcc1;
+                0>=Velocidade1->
+                    NewVel1 = Velocidade1 +  0.066*NewAcc1;
                 true ->
                     if NewAcc1 == 0 ->
                         NewVel1 = Velocidade1 - 0.066;
                     true ->
 
-                        NewVel1 = Velocidade1 + NewAcc1*0.15
+                        NewVel1 = Velocidade1 + NewAcc1*0.015
                     end
             end,
             if 
                 
-                0>Velocidade2->
-                    NewVel2 = Velocidade2 +  0.66*NewAcc2;
+                0>=Velocidade2->
+                    % Velocidade2 +  0.66*NewAcc2
+                    NewVel2 = Velocidade2 +  0.066*NewAcc2;
                 true ->
                     if NewAcc2 == 0 ->
                         NewVel2 = Velocidade2 - 0.066;
                     true ->
 
 
-                        NewVel2 = Velocidade2 + NewAcc2*0.15 
+                        NewVel2 = Velocidade2 + NewAcc2*0.015 
                     end
             end,
             
@@ -417,17 +429,20 @@ engine(GameRoom,Users1,Users2,Objects)->
                             GameRoom ! {ponto,From2},
                             engine(GameRoom,{User1,Posx11,W11,Q11,E11, Posy11, Aceleracao11, Velocidade11,Ang11,Boost11,Nboost11,From1},{User2,Posx22,W22,Q22,E22, Posy22, Aceleracao22, Velocidade22,Ang22,Boost22,Nboost22,From2},Objects);
                         collision->
-                            engine(GameRoom,{User1,NewX1,W1,E1,Q1,NewY1,NewAcc1,-2, NewAng1,Boost1,Nboost1,From1},{User2,NewX2,W2,E2,Q2,NewY2,NewAcc2,-2, NewAng2,Boost2,Nboost2,From2},Objects)
+                            engine(GameRoom,{User1,NewX1,W1,E1,Q1,NewY1,0.5,-2, NewAng1,Boost1,Nboost1,From1},{User2,NewX2,W2,E2,Q2,NewY2,0.5,-2, NewAng2,Boost2,Nboost2,From2},Objects)
                    end;
                 true ->
                     ok
             end,
 
             
-            case atingiuObjeto(Objects,NewX1,NewY1) of 
-                [{Cor,X,Y}] ->
-                    From1 ! {line,"game:tiraObjeto" ++ " "++float_to_list(Cor) ++ " "++ float_to_list(X) ++ " " ++ float_to_list(Y)++"\n"},
-                    From2 ! {line,"game:tiraObjeto" ++ " "++float_to_list(Cor) ++ " "++ float_to_list(X) ++ " " ++ float_to_list(Y)++"\n"},
+            case atingiuObjeto(Objects,Objects,NewX1,NewY1,NewX2,NewY2) of 
+                {Cor,X,Y,NewObj,user1} ->
+                    NewObjects = NewObj,
+                    NewNboost2= Nboost2,
+                    NewBoost2 = Boost2,
+                    From1 ! {line,"game:tiraObjeto" ++ " "++integer_to_list(Cor) ++ " "++ integer_to_list(X) ++ " " ++ integer_to_list(Y)++"\n"},
+                    From2 ! {line,"game:tiraObjeto" ++ " "++integer_to_list(Cor) ++ " "++ integer_to_list(X) ++ " " ++ integer_to_list(Y)++"\n"},
                     if 
                         Nboost1 >= 5 ->
                             NewNboost1= 5,
@@ -448,21 +463,18 @@ engine(GameRoom,Users1,Users2,Objects)->
                                     timer:send_after(5000  ,self(), {retiraBoost,From1, Boost1})
                             end
                     end; 
-                _ ->
+                {Cor2,X2,Y2,NewObj2,user2} ->
+                    NewObjects = NewObj2,
                     NewNboost1= Nboost1,
-                    NewBoost1 = Boost1
-            end ,
-
-            case atingiuObjeto(Objects,NewX2,NewY2) of 
-                [{Cor2,X2,Y2}] ->
-                    From1 ! {line,"game:tiraObjeto" ++ " "++float_to_list(Cor2) ++ " "++ float_to_list(X2) ++ " " ++ float_to_list(Y2)++"\n"},
-                    From2 ! {line,"game:tiraObjeto" ++ " "++float_to_list(Cor2) ++ " "++ float_to_list(X2) ++ " " ++ float_to_list(Y2)++"\n"},
+                    NewBoost1 = Boost1,
+                    From1 ! {line,"game:tiraObjeto" ++ " "++integer_to_list(Cor2) ++ " "++ integer_to_list(X2) ++ " " ++ integer_to_list(Y2)++"\n"},
+                    From2 ! {line,"game:tiraObjeto" ++ " "++integer_to_list(Cor2) ++ " "++ integer_to_list(X2) ++ " " ++ integer_to_list(Y2)++"\n"},
                     if                             
-
+    
                         Nboost2 >= 5 ->
                             NewNboost2 = 5,
                             NewBoost2 = Boost2;
-                            ok;
+                            
                         true ->
                             case Cor2 of
                                 1->
@@ -472,18 +484,23 @@ engine(GameRoom,Users1,Users2,Objects)->
                                     NewNboost2 = Nboost2 + 1,
                                     NewBoost2 = Boost2 + 0.5,
                                     timer:send_after(8000  ,self(), {retiraBoost,From2, Boost2});
-                                    
+                                        
                                 3->
                                     NewNboost2 = Nboost2 + 1,
                                     NewBoost2 = Boost2 + 1,
                                     timer:send_after(5000  ,self(), {retiraBoost,From2, Boost2})
                             end
                     end;
-                _ ->
-                    
+                NewObj3 ->
+                    NewObjects = NewObj3,
                     NewNboost2= Nboost2,
-                    NewBoost2 = Boost2
+                    NewBoost2 = Boost2,
+                    NewNboost1= Nboost1,
+                    NewBoost1 = Boost1
+                
             end ,
+
+                
                     
             From1 ! {line,"game:position" ++ " "++float_to_list(NewX1) ++ " "++ float_to_list(NewY1) ++ " " ++ float_to_list(NewAng1) ++ " "++ float_to_list(NewX2) ++ " " ++ float_to_list(NewY2)++ " " ++ float_to_list(NewAng2) ++"\n"},
             From2 ! {line,"game:position" ++ " "++float_to_list(NewX2) ++ " "++ float_to_list(NewY2) ++ " " ++ float_to_list(NewAng2) ++ " "++ float_to_list(NewX1) ++ " " ++ float_to_list(NewY1)++ " " ++ float_to_list(NewAng1) ++"\n"},
@@ -493,7 +510,7 @@ engine(GameRoom,Users1,Users2,Objects)->
                 (NewX1 > 1000 orelse 0 > NewX1 orelse NewY1 > 1000 orelse  0 >NewY1)->
                     GameRoom ! {playerOut,From2};
                 true -> 
-                    engine(GameRoom,{User1,NewX1,W1,E1,Q1,NewY1,NewAcc1,NewVel1, NewAng1,NewBoost1,NewNboost1,From1},{User2,NewX2,W2,E2,Q2,NewY2,NewAcc2,NewVel2, NewAng2,NewBoost2,NewNboost2,From2},Objects)
+                    engine(GameRoom,{User1,NewX1,W1,E1,Q1,NewY1,NewAcc1,NewVel1, NewAng1,NewBoost1,NewNboost1,From1},{User2,NewX2,W2,E2,Q2,NewY2,NewAcc2,NewVel2, NewAng2,NewBoost2,NewNboost2,From2},NewObjects)
             end;
         gameOver ->
             io:format("game over!!!! Esse "),
@@ -762,6 +779,7 @@ usersManager(Users,String,RM,From)->
 
     case String of 
         "find_game " ++ User ->
+            io:format("Aqui"),
             [NewUser] = string:tokens(User, "\n"),
             case find_game(NewUser,Users,From) of 
                 {ok,NewUsers,Nivel} ->
@@ -785,7 +803,7 @@ usersManager(Users,String,RM,From)->
             io:format("Login\n"),
             [User,Pass] = string:tokens(Rest," "),
             case login(User,Pass,Users,From) of
-                {_, NewUsers,Nivel} ->
+                {_, NewUsers,_} ->
                     io:format("login com sucesso\n");
                 {_,NewUsers} ->
                     io:format("Login não teve sucesso\n"),
@@ -796,11 +814,14 @@ usersManager(Users,String,RM,From)->
     end,
     NewUsers.
 find_game(User,Map,From)->
+
     case maps:find(User,Map) of
         {ok,{Pass,Nivel,Vitorias,true,From,false}} ->
+            io:format("Find_game funcionando"),
             From ! {line,"Users:sucessful\n"},
             {ok,maps:update(User,{Pass,Nivel,Vitorias,true,From,true},Map),Nivel};
         _ ->
+            io:format("Find_game Não funcionando"),
             From ! {line,"Users:unsucessful\n"}
 end.
 
@@ -813,6 +834,10 @@ listagemVitorias(Users)->
         true ->
             "Scoreboard:" ++ integer_to_list(length(NewLista)) ++  " "++ stringLista(length(NewLista),NewLista)
     end .
+
+
+stringLista(0,[])->
+    "";
 
 stringLista(N,[{User,Vic}|T])->
     if 
@@ -839,11 +864,14 @@ create_account(User,Pass,Map,From) ->
     end.
 
 close_account(User,Pass,Map,From) ->
+    
     case maps:find(User,Map) of
-        {ok,{Pass,_,_,_,From,_}} ->
+        {ok,{Pass,_,_,_,_,_}} ->
+            io:format("OI"),
             From ! {line,"Users:sucessful\n"},
-            {ok,maps:remove(Map,User)};
+            {ok,maps:remove(User,Map)};
          _ -> 
+            io:format("Ola"),
             From ! {line, "Users:unsucessful\n"},
             {invalid,Map}
     end.
@@ -856,6 +884,7 @@ login(User,Pass,Map,From) ->
             From ! {nome, User},
             {ok,maps:update(User, {NewPass,Nivel,Vitorias,true,From,false}, Map),Nivel};       
         _ ->
+            io:format("Não fechou a conta "),
             From ! {line,"Users:unsucessful\n"},
             {ok,Map}
 
