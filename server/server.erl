@@ -132,8 +132,10 @@ user(Sock ,RM,Room,User) ->
             Game ! {enter,self()},
             user(Sock,RM,Game,User);
         {tcp_closed, _} ->
+            Room ! {disconnected,self()},
             RM ! {mensagem, "logout " ++ User,self()};
         {tcp_error, _, _} ->
+            Room ! {disconnected,self()},
             RM ! {mensagem,"logout " ++ User ,self()};
         {nome, _} ->
             ok;
@@ -143,15 +145,13 @@ end.
 generateObject()->
     {rand:uniform(3),rand:uniform(1000),rand:uniform(1000)}.
  
-gameTimer(Engine,Time)->
-    if Time>120000 ->
-        ok;
-    true ->
-        receive
-            after 15 ->
-                Engine ! timeout,
-                gameTimer(Engine,Time+15)
-            end
+gameTimer(Engine)->
+    receive
+        gameOver ->
+            ok
+        after 15 ->
+            Engine ! timeout,
+            gameTimer(Engine)
     end.
 
 objectTimer(Engine)->
@@ -262,19 +262,29 @@ engine(GameRoom,Users1,Users2,Objects)->
                             engine(GameRoom,Users1,{User2,Posx2,W2,E2,false,Posy2,Aceleracao2,Velocidade2, Ang2,BlueBoost2,NBlueboost2,GreenBoost2,NGreenBoost2,From2},Objects)
                         end
                     end;
-        {retiraBoost,user1, greenboost}->       
+        {retiraBoost,user1, greenboost}->
+            io:format("tirei boost ~n"),       
             engine(GameRoom,{User1,Posx1,W1,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,BlueBoost1,NBlueboost1,GreenBoost1 - math:pow(0.7,NGreenBoost1) ,NGreenBoost1-1,From1},Users2,Objects);
-        {retiraBoost,user1, bluenboost}->       
+        {retiraBoost,user1, bluenboost}->
+            io:format("tirei boost ~n"),       
             engine(GameRoom,{User1,Posx1,W1,E1,Q1,Posy1,Aceleracao1,Velocidade1, Ang1,BlueBoost1-math:pow(0.7,NBlueboost1),NBlueboost1-1,GreenBoost1,NGreenBoost1,From1},Users2,Objects);
-        {retiraBoost,user2, greenboost}->       
+        {retiraBoost,user2, greenboost}->
+            io:format("tirei boost ~n"),       
             engine(GameRoom,Users1,{User2,Posx2,W2,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,BlueBoost2,NBlueboost2,GreenBoost2- math:pow(0.7,NGreenBoost2),NGreenBoost2-1,From2},Objects);
         {retiraBoost,user2, bluenboost}->       
+            io:format("tirei boost ~n"),
             engine(GameRoom,Users1,{User2,Posx2,W2,E2,Q2,Posy2,Aceleracao2,Velocidade2, Ang2,BlueBoost2-math:pow(0.7,NBlueboost2),NBlueboost2-1,GreenBoost2,NGreenBoost2,From2},Objects);
         {object,Objeto}->
-            NewObjects = Objects ++ [Objeto],
-            {Cor,X,Y} = Objeto,
-            From1 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ integer_to_list(X) ++ " " ++ integer_to_list(Y) ++ "\n"},
-            From2 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ integer_to_list(X) ++ " " ++ integer_to_list(Y) ++ "\n"},
+            if 
+                (length(Objects) == 5 )->
+                    NewObjects = Objects ;
+                true ->
+                    
+                    NewObjects = Objects ++ [Objeto],
+                    {Cor,X,Y} = Objeto,
+                    From1 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ integer_to_list(X) ++ " " ++ integer_to_list(Y) ++ "\n"},
+                    From2 ! {line , "game:object" ++ " "++ integer_to_list(Cor) ++ " " ++ integer_to_list(X) ++ " " ++ integer_to_list(Y) ++ "\n"}
+            end,
             engine(GameRoom,Users1,Users2,NewObjects);
         timeout ->
            
@@ -385,39 +395,32 @@ engine(GameRoom,Users1,Users2,Objects)->
             case atingiuObjeto(Objects,Objects,NewX1,NewY1,NewX2,NewY2) of 
                 {Cor,X,Y,NewObj,user1} ->
                     NewObjects = NewObj,
-                    %BlueBoost2,NBlueboost2,GreenBoost2,NGreenBoost2
                     NewNBlueboost2= NBlueboost2,
                     NewBlueBoost2 = BlueBoost2*NBlueboost2,
                     NewNGreenboost2= NGreenBoost2,
                     NewGreenBoost2 = GreenBoost2*NGreenBoost2,
                     From1 ! {line,"game:tiraObjeto" ++ " "++integer_to_list(Cor) ++ " "++ integer_to_list(X) ++ " " ++ integer_to_list(Y)++"\n"},
                     From2 ! {line,"game:tiraObjeto" ++ " "++integer_to_list(Cor) ++ " "++ integer_to_list(X) ++ " " ++ integer_to_list(Y)++"\n"},
-                    %if 
-                    %    Nboost1 >= 5 ->
-                    %        NewNboost1= 5,
-                    %        NewBoost1 = Boost1;
-                    %    true ->
-                            case Cor of
-                                1->
-                                    NewNBlueboost1= 0,
-                                    NewBlueBoost1 = 0,
-                                    NewNGreenboost1= 0,
-                                    NewGreenBoost1 = 0;
-                                    
-                                2->
-                                    NewNBlueboost1= NBlueboost1 + 1,
-                                    NewBlueBoost1 = BlueBoost1 +  math:pow(0.7,NewNBlueboost1),
-                                    NewNGreenboost1= NGreenBoost1,
-                                    NewGreenBoost1 = GreenBoost1,
-                                    timer:send_after(5000  ,self(), {retiraBoost,user1, blueboost});
-                                    
-                                3->
-                                    NewNBlueboost1= NBlueboost1,
-                                    NewBlueBoost1 = BlueBoost1,
-                                    NewNGreenboost1= NGreenBoost1 + 1,
-                                    NewGreenBoost1 = GreenBoost1 +  math:pow(0.7,NewNGreenboost1),
-                                    timer:send_after(5000  ,self(), {retiraBoost,user1, greenboost})
-                            %end
+                    case Cor of
+                        1->
+                            NewNBlueboost1= 0,
+                            NewBlueBoost1 = 0,
+                            NewNGreenboost1= 0,
+                            NewGreenBoost1 = 0;
+                            
+                        2->
+                            NewNBlueboost1= NBlueboost1 + 1,
+                            NewBlueBoost1 = BlueBoost1 +  math:pow(0.7,NewNBlueboost1),
+                            NewNGreenboost1= NGreenBoost1,
+                            NewGreenBoost1 = GreenBoost1,
+                            timer:send_after(5000  ,self(), {retiraBoost,user1, blueboost});
+                            
+                        3->
+                            NewNBlueboost1= NBlueboost1,
+                            NewBlueBoost1 = BlueBoost1,
+                            NewNGreenboost1= NGreenBoost1 + 1,
+                            NewGreenBoost1 = GreenBoost1 +  math:pow(0.7,NewNGreenboost1),
+                            timer:send_after(5000  ,self(), {retiraBoost,user1, greenboost})
                     end; 
                 {Cor2,X2,Y2,NewObj2,user2} ->
                     NewObjects = NewObj2,
@@ -427,33 +430,26 @@ engine(GameRoom,Users1,Users2,Objects)->
                     NewGreenBoost1 = GreenBoost1*NGreenBoost1,
                     From1 ! {line,"game:tiraObjeto" ++ " "++integer_to_list(Cor2) ++ " "++ integer_to_list(X2) ++ " " ++ integer_to_list(Y2)++"\n"},
                     From2 ! {line,"game:tiraObjeto" ++ " "++integer_to_list(Cor2) ++ " "++ integer_to_list(X2) ++ " " ++ integer_to_list(Y2)++"\n"},
-                    %if                             
-    
-                    %    Nboost2 >= 5 ->
-                    %        NewNboost2 = 5,
-                    %        NewBoost2 = Boost2;
+                    case Cor2 of
+                        1->
+                            NewNBlueboost2= 0,
+                            NewBlueBoost2 = 0,
+                            NewNGreenboost2= 0,
+                            NewGreenBoost2 = 0;
                             
-                    %    true ->
-                        case Cor2 of
-                            1->
-                                NewNBlueboost2= 0,
-                                NewBlueBoost2 = 0,
-                                NewNGreenboost2= 0,
-                                NewGreenBoost2 = 0;
-                                
-                            2->
-                                NewNBlueboost2= NBlueboost2 + 1,
-                                NewBlueBoost2 = BlueBoost2 +  math:pow(0.7,NewNBlueboost2),
-                                NewNGreenboost2= NGreenBoost2,
-                                NewGreenBoost2 = GreenBoost2;
-                                %timer:send_after(8000  ,self(), {retiraBoost,From1, BlueBoost1});
-                                
-                            3->
-                                NewNBlueboost2= NBlueboost2,
-                                NewBlueBoost2 = BlueBoost2,
-                                NewNGreenboost2= NGreenBoost2 + 1,
-                                NewGreenBoost2 = GreenBoost2 +  math:pow(0.7,NewNBlueboost2)
-                            %end
+                        2->
+                            NewNBlueboost2= NBlueboost2 + 1,
+                            NewBlueBoost2 = BlueBoost2 +  math:pow(0.7,NewNBlueboost2),
+                            NewNGreenboost2= NGreenBoost2,
+                            NewGreenBoost2 = GreenBoost2,
+                            timer:send_after(5000  ,self(), {retiraBoost,user2, blueboost});
+                            
+                        3->
+                            NewNBlueboost2= NBlueboost2,
+                            NewBlueBoost2 = BlueBoost2,
+                            NewNGreenboost2= NGreenBoost2 + 1,
+                            NewGreenBoost2 = GreenBoost2 +  math:pow(0.7,NewNBlueboost2),
+                            timer:send_after(5000  ,self(), {retiraBoost,user2, greenboost})
                     end;
                 NewObj3 ->
                     NewObjects = NewObj3,
@@ -500,15 +496,15 @@ gameRoom(User1,User2,RM) ->
             {Posx1,W1,Q1,E1, Posy1, Aceleracao1, Velocidade1,Ang1,BlueBoost1,NBlueboost1,GreenBoost1,NGreenBoost1} = {250,false,false,false,250,0.0,0.0,0.0,0.0,0.0,0,0},
             {Posx2,W2,Q2,E2, Posy2, Aceleracao2, Velocidade2,Ang2,BlueBoost2,NBlueboost2,GreenBoost2,NGreenBoost2} = {750,false,false,false,750,0.0,0.0,math:pi(),0.0,0.0,0,0},
             Engine = spawn(fun()->engine(GameRoom,{ Users1,Posx1,W1,Q1,E1, Posy1, Aceleracao1, Velocidade1,Ang1,BlueBoost1,NBlueboost1,GreenBoost1,NGreenBoost1,From1}, { Users2,Posx2,W2,Q2,E2, Posy2, Aceleracao2, Velocidade2,Ang2,BlueBoost2,NBlueboost2,GreenBoost2,NGreenBoost2,From2},[Object]) end),
-            spawn(fun() -> gameTimer(Engine,0) end),
+            Timer = spawn(fun() -> gameTimer(Engine) end),
             spawn(fun() -> objectTimer(Engine) end),
-            gameRoom(User1,User2,Tref,RM,Engine)
+            gameRoom(User1,User2,Tref,RM,Engine,Timer)
     
     end.
 
 
     
-gameRoom(Users1,Users2,Tref,RM,Engine) ->
+gameRoom(Users1,Users2,Tref,RM,Engine,Timer) ->
     {User1,From1,Pontos1,Nivel1} = Users1,
     {User2,From2,Pontos2,Nivel2} = Users2,
     
@@ -520,17 +516,17 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
                 Pid == From2 ->
                     Engine ! {keyPressed, Data,From2}   
             end,
-            gameRoom(Users1,Users2,Tref,RM,Engine);
+            gameRoom(Users1,Users2,Tref,RM,Engine,Timer);
         {ponto,Pid} ->
             io:format("Pontuaçao 1 ~p ~n", [Pontos1]),
             io:format("Pontuaçao 1 ~p ~n", [Pontos2]),
             if 
                 Pid == From1->    
                     io:format("ponto player 1~n"),       
-                    gameRoom({User1,From1,Pontos1+1,Nivel1},Users2,Tref,RM,Engine);
+                    gameRoom({User1,From1,Pontos1+1,Nivel1},Users2,Tref,RM,Engine,Timer);
                 Pid == From2 ->
                     io:format("ponto player 2~n"), 
-                    gameRoom(Users1,{User2,From2,Pontos2+1,Nivel2},Tref,RM,Engine)                            
+                    gameRoom(Users1,{User2,From2,Pontos2+1,Nivel2},Tref,RM,Engine,Timer)                            
             end;
         {keyr,Data,Pid} ->
                 if 
@@ -539,9 +535,9 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
                     Pid == From2 ->
                         Engine ! {keyReleased, Data,From2}
                 end,
-                gameRoom(Users1,Users2,Tref,RM,Engine);
+                gameRoom(Users1,Users2,Tref,RM,Engine,Timer);
         {enter, _} ->
-            gameRoom(Users1,Users2,Tref,RM,Engine);
+            gameRoom(Users1,Users2,Tref,RM,Engine,Timer);
         {playerOut,Pid1}->
             Engine ! gameOver,
             if 
@@ -564,11 +560,12 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
                     Engine ! {overTime,OT};
                 true ->
                     self() ! gameOver,
-                    gameRoom(Users1,Users2,Tref,RM,Engine)
+                    gameRoom(Users1,Users2,Tref,RM,Engine,Timer)
             end;
             
         gameOver ->
             io:format("Acabou o jogo ~n", []),
+            Timer ! gameOver,
             Engine ! gameOver,
             case Pontos1 > Pontos2 of
                 true ->
@@ -580,7 +577,24 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
                     From1 ! {line, "game:gameOver venceu\n"},
                     From2 ! {line, "game:gameOver perdeu\n"},
                     RM ! {matchOver,User1,User2}
+            end;
+        {disconnected,Pid} ->
+            Timer ! gameOver,
+            Engine ! gameOver,
+            if 
+                Pid == From1 ->
+                    From2 ! {line, "game:gameOver venceu\n"},
+                    From1 ! {line, "game:gameOver perdeu\n"},
+
+                    RM ! {matchOver,User2,User1};
+                true ->
+                    From1 ! {line, "game:gameOver venceu\n"},
+                    From2 ! {line, "game:gameOver perdeu\n"},
+
+                    RM ! {matchOver,User1,User2}
             end
+        
+
         
     end.
 
@@ -623,14 +637,14 @@ overtime(Users1,Users2,RM,Engine) ->
         {ponto,Pid} ->
             if  
                 Pid == From1->         
-                    From1 ! {line, "game:gameOver venceu\n"},
-                    From2 ! {line, "game:gameOver perdeu\n"},  
-                    RM ! {matchOver,User1,User2};
+                    From2 ! {line, "game:gameOver venceu\n"},
+                    From1 ! {line, "game:gameOver perdeu\n"},  
+                    RM ! {matchOver,User2,User1};
 
                 Pid == From2 ->
-                    From2 ! {line, "game:gameOver venceu\n"},
-                    From1 ! {line, "game:gameOver perdeu\n"},
-                    RM ! {matchOver,User2,User1}
+                    From1 ! {line, "game:gameOver venceu\n"},
+                    From2 ! {line, "game:gameOver perdeu\n"},
+                    RM ! {matchOver,User1,User2}
             end,
             Engine ! gameOver
     end.
