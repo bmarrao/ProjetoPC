@@ -1,4 +1,6 @@
 conta2;admin;1;0
 tigas;admin;2;2
 ttata;admin;1;1
-user1;admin;1;1
+user1;admin;2;2
+user3;admin;1;1
+user4;admin;1;0

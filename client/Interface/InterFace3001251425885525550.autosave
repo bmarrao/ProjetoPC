@@ -198,7 +198,7 @@ void drawObjects()
       {
         fill(255,0,0);
       }
-      else if (t.getFirst() == 3)
+      else if (t.getFirst() == 2)
       {
         fill(0,255,0);
       }
@@ -298,7 +298,7 @@ void draw() {
       break;
     default :
       menu();
-    break;		
+    break;    
   }
 }
 
