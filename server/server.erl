@@ -474,14 +474,15 @@ engine(GameRoom,Users1,Users2,Objects)->
             From2 ! {line,"game:position" ++ " "++float_to_list(NewX2) ++ " "++ float_to_list(NewY2) ++ " " ++ float_to_list(NewAng2) ++ " "++ float_to_list(NewX1) ++ " " ++ float_to_list(NewY1)++ " " ++ float_to_list(NewAng1) ++"\n"},
             if 
                 (NewX2 > 1000 orelse 0 > NewX2 orelse NewY2 > 1000 orelse  0 >NewY2)->
+                    io:format("player2 out ~n"),
                     GameRoom ! {playerOut,From1};
                 (NewX1 > 1000 orelse 0 > NewX1 orelse NewY1 > 1000 orelse  0 >NewY1)->
+                    io:format("player1 out ~n"),
                     GameRoom ! {playerOut,From2};
                 true -> 
                     engine(GameRoom,{User1,NewX1,W1,E1,Q1,NewY1,NewAcc1,NewVel1, NewAng1,NewNBlueboost1,NewBlueBoost1 ,NewNGreenboost1,NewGreenBoost1,From1},{User2,NewX2,W2,E2,Q2,NewY2,NewAcc2,NewVel2, NewAng2,NewNBlueboost2,NewBlueBoost2 ,NewNGreenboost2,NewGreenBoost2,From2},NewObjects)
             end;
         gameOver ->
-            io:format("Game Over\n"),
             ok
         
     end.
@@ -510,7 +511,7 @@ gameRoom(User1,User2,RM) ->
 gameRoom(Users1,Users2,Tref,RM,Engine) ->
     {User1,From1,Pontos1,Nivel1} = Users1,
     {User2,From2,Pontos2,Nivel2} = Users2,
-   
+    
     receive
         {keyp,Data,Pid} ->  
             if 
@@ -521,10 +522,14 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
             end,
             gameRoom(Users1,Users2,Tref,RM,Engine);
         {ponto,Pid} ->
+            io:format("Pontuaçao 1 ~p ~n", [Pontos1]),
+            io:format("Pontuaçao 1 ~p ~n", [Pontos2]),
             if 
-                Pid == From1->           
+                Pid == From1->    
+                    io:format("ponto player 1~n"),       
                     gameRoom({User1,From1,Pontos1+1,Nivel1},Users2,Tref,RM,Engine);
                 Pid == From2 ->
+                    io:format("ponto player 2~n"), 
                     gameRoom(Users1,{User2,From2,Pontos2+1,Nivel2},Tref,RM,Engine)                            
             end;
         {keyr,Data,Pid} ->
@@ -552,7 +557,7 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
         overTime ->
             if
                 Pontos1 == Pontos2 ->
-                    
+                    io:format("Entramos em Overtime ~n"),
                     OT = spawn(fun() -> overtime(Users1,Users2,RM,Engine)end),
                     From1 ! {changeRoom,OT},
                     From2 ! {changeRoom, OT},
@@ -567,14 +572,14 @@ gameRoom(Users1,Users2,Tref,RM,Engine) ->
             Engine ! gameOver,
             case Pontos1 > Pontos2 of
                 true ->
-                    From1 ! {line, "game:gameOver venceu\n"},
-                    From2 ! {line, "game:gameOver perdeu\n"},
-
-                    RM ! {matchOver,User1,User2};
-                false ->
                     From2 ! {line, "game:gameOver venceu\n"},
                     From1 ! {line, "game:gameOver perdeu\n"},
-                    RM ! {matchOver,User2,User1}
+
+                    RM ! {matchOver,User2,User1};
+                false ->
+                    From1 ! {line, "game:gameOver venceu\n"},
+                    From2 ! {line, "game:gameOver perdeu\n"},
+                    RM ! {matchOver,User1,User2}
             end
         
     end.

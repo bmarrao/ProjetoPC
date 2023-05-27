@@ -1,6 +1,12 @@
+brenin;admin;2;2
 conta2;admin;1;0
-tigas;admin;2;2
+tata;admin;1;0
+tigas;admin;3;4
 ttata;admin;1;1
-user1;admin;2;2
-user3;admin;1;1
+user1;admin;3;4
+user3;admin;2;2
 user4;admin;1;0
+user5;admin;4;6
+user6;admin;3;5
+user7;admin;1;0
+user8;admin;1;0
